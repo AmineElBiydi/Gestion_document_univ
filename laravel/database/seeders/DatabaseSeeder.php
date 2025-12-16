@@ -16,8 +16,23 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+                // Base data - must be seeded first
+            AnneeUniversitaireSeeder::class,
+            FiliereSeeder::class,
+            NiveauSeeder::class,
+            ModuleSeeder::class,
+            ProfesseurSeeder::class,
+
+                // Relationship tables
+            ModuleNiveauSeeder::class,
+            ProfesseurFiliereSeeder::class,
+
+                // Users and enrollments
             AdminSeeder::class,
             EtudiantSeeder::class,
+            InscriptionSeeder::class,
+
+                // Additional data
             DemandeSeeder::class,
             ReclamationSeeder::class,
         ]);
