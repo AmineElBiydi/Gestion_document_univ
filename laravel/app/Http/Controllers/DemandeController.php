@@ -109,6 +109,21 @@ class DemandeController extends Controller
     }
 
     /**
+     * Get list of professors for convention stage form
+     */
+    public function getProfesseurs()
+    {
+        $professeurs = Professeur::select('id', 'nom', 'prenom', 'email', 'specialite')
+            ->orderBy('nom')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $professeurs
+        ]);
+    }
+
+    /**
      * Créer une nouvelle demande de document
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
