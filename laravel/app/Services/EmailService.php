@@ -19,6 +19,7 @@ class EmailService
     {
         try {
             Mail::to($demande->etudiant->email)->send(new DemandeSoumise($demande));
+            \Log::info('Email confirmation demande envoyé: ' . $demande->num_demande);
             return true;
         } catch (\Exception $e) {
             \Log::error('Erreur envoi email confirmation demande: ' . $e->getMessage());
@@ -32,7 +33,22 @@ class EmailService
     public function envoyerValidationDemande(Demande $demande)
     {
         try {
-            Mail::to($demande->etudiant->email)->send(new DemandeValidee($demande));
+            $pdfPath = null;
+            
+            // Generate PDF for convention de stage
+            if ($demande->type_document === 'convention_stage') {
+                $pdfGenerator = new ConventionStagePDF();
+                $pdfPath = $pdfGenerator->generate($demande);
+            }
+            
+            Mail::to($demande->etudiant->email)->send(new DemandeValidee($demande, $pdfPath));
+            \Log::info('Email validation demande envoyé: ' . $demande->num_demande);
+            
+            // Clean up temporary PDF file
+            if ($pdfPath && file_exists($pdfPath)) {
+                unlink($pdfPath);
+            }
+            
             return true;
         } catch (\Exception $e) {
             \Log::error('Erreur envoi email validation demande: ' . $e->getMessage());
@@ -47,6 +63,7 @@ class EmailService
     {
         try {
             Mail::to($demande->etudiant->email)->send(new DemandeRefusee($demande));
+            \Log::info('Email refus demande envoyé: ' . $demande->num_demande);
             return true;
         } catch (\Exception $e) {
             \Log::error('Erreur envoi email refus demande: ' . $e->getMessage());
@@ -61,6 +78,7 @@ class EmailService
     {
         try {
             Mail::to($reclamation->etudiant->email)->send(new ReclamationRecue($reclamation));
+            \Log::info('Email confirmation réclamation envoyé: ' . $reclamation->id);
             return true;
         } catch (\Exception $e) {
             \Log::error('Erreur envoi email confirmation réclamation: ' . $e->getMessage());

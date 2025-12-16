@@ -6,8 +6,6 @@ use App\Models\Demande;
 use App\Models\Admin;
 use App\Models\Reclamation;
 use App\Models\Etudiant;
-use App\Mail\ReclamationReponse;
-use App\Mail\DemandeValidee;
 use Illuminate\Support\Facades\Mail;
 use App\Services\EmailService;
 use Illuminate\Http\Request;
@@ -289,13 +287,8 @@ class AdminController extends Controller
             'traite_par_admin_id' => auth()->id(),
         ]);
 
-        // Send email notification to student
-        $etudiant = $demande->etudiant;
-        $typeDocument = $demande->getTypeDocumentLabel();
-        
-        Mail::to($etudiant->email)->send(
-            new DemandeValidee($demande, $etudiant, $typeDocument)
-        );
+        // Send email notification to student via EmailService
+        $this->emailService->envoyerValidationDemande($demande);
 
         return response()->json([
             'success' => true,
@@ -425,20 +418,9 @@ class AdminController extends Controller
             'traite_par_admin_id' => auth()->id(),
         ]);
 
-        // Send email notification to student
-        $etudiant = $reclamation->etudiant;
-        $typeReclamation = $reclamation->type;
-        $adminNom = auth()->user()->nom . ' ' . auth()->user()->prenom;
-        
-        Mail::to($etudiant->email)->send(
-            new ReclamationReponse(
-                $reclamation,
-                $etudiant,
-                $typeReclamation,
-                $validated['reponse'],
-                $adminNom
-            )
-        );
+        // Send email notification to student (disabled - Mail class not created)
+        // TODO: Create ReclamationReponse Mail class
+        \Log::info('Email reclamation reponse (disabled): ' . $reclamation->id);
 
         return response()->json([
             'success' => true,
@@ -564,13 +546,8 @@ class AdminController extends Controller
             'traite_par_admin_id' => auth()->id(),
         ]);
 
-        // Send email notification to student
-        $etudiant = $demande->etudiant;
-        $typeDocument = $demande->getTypeDocumentLabel();
-        
-        Mail::to($etudiant->email)->send(
-            new DemandeValidee($demande, $etudiant, $typeDocument)
-        );
+        // Send email notification to student via EmailService
+        $this->emailService->envoyerValidationDemande($demande);
 
         return response()->json([
             'success' => true,

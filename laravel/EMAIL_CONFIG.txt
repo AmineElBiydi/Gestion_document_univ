@@ -1,0 +1,28 @@
+# Configuration Email - À ajouter dans votre fichier .env
+
+# Option 1: Pour DÉVELOPPEMENT (emails dans les logs)
+# Les emails seront enregistrés dans storage/logs/laravel.log
+MAIL_MAILER=log
+MAIL_FROM_ADDRESS="noreply@universite.ma"
+MAIL_FROM_NAME="Université - Gestion Documents"
+
+# Option 2: Pour PRODUCTION avec Gmail
+# Décommentez les lignes ci-dessous et remplacez par vos informations
+# MAIL_MAILER=smtp
+# MAIL_HOST=smtp.gmail.com
+# MAIL_PORT=587
+# MAIL_USERNAME=votre.email@gmail.com
+# MAIL_PASSWORD=votre_mot_de_passe_application
+# MAIL_ENCRYPTION=tls
+# MAIL_FROM_ADDRESS="votre.email@gmail.com"
+# MAIL_FROM_NAME="Université - Gestion Documents"
+
+# Option 3: Pour TESTING avec Mailtrap
+# MAIL_MAILER=smtp
+# MAIL_HOST=sandbox.smtp.mailtrap.io
+# MAIL_PORT=2525
+# MAIL_USERNAME=votre_username_mailtrap
+# MAIL_PASSWORD=votre_password_mailtrap
+# MAIL_ENCRYPTION=tls
+# MAIL_FROM_ADDRESS="test@universite.ma"
+# MAIL_FROM_NAME="Université - Gestion Documents"
