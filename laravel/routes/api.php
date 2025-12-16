@@ -1,10 +1,11 @@
 <?php
 
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DemandeController;
 use App\Http\Controllers\AdminController;
 
-// Routes publiques (Étudiants)
+// Routes publiques (Étudiants) 
 Route::post('/demandes', [DemandeController::class, 'store']);
 Route::post('/reclamations', [DemandeController::class, 'createReclamation']);
 Route::post('/suivi-demandes', [DemandeController::class, 'suiviDemandes']);
