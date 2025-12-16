@@ -479,26 +479,7 @@ export default function Demande() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="mention">Mention (optionnel)</Label>
-            <Select
-              value={details.mention || ""}
-              onValueChange={(v) => {
-                setDetails({ ...details, mention: v });
-                setHasFilledDocumentDetails(true);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez la mention" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="passable">Passable</SelectItem>
-                <SelectItem value="assez_bien">Assez Bien</SelectItem>
-                <SelectItem value="bien">Bien</SelectItem>
-                <SelectItem value="tres_bien">Très Bien</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+         \
         </>
       ),
       releve_notes: (
