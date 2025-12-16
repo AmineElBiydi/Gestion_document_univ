@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string('lieu_naissance')->nullable();
             $table->string('telephone', 20)->nullable();
             $table->text('adresse')->nullable();
+            $table->string('pays')->nullable();
             $table->enum('status', ['actif', 'diplome', 'abandonne', 'suspendu'])->default('actif')->index('idx_etudiants_status');
             $table->timestamps();
         });
