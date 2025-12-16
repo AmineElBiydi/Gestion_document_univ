@@ -324,10 +324,44 @@ class DemandeController extends Controller
     public function suiviDemandes(Request $request)
     {
         $validated = $request->validate([
-            'email' => 'required|email',
-            'apogee' => 'required|string',
-            'cin' => 'required|string',
+            'email' => 'nullable|email',
+            'apogee' => 'nullable|string',
+            'cin' => 'nullable|string',
+            'num_demande' => 'nullable|string',
         ]);
+
+        // Si un numéro de demande est fourni, rechercher directement
+        if (!empty($validated['num_demande'])) {
+            $demande = Demande::with([
+                'attestationScolaire',
+                'attestationReussite.decisionAnnee.inscription.filiere',
+                'attestationReussite.decisionAnnee.inscription.niveau',
+                'attestationReussite.decisionAnnee.inscription.anneeUniversitaire',
+                'releveNotes.decisionAnnee.inscription.filiere',
+                'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
+                'conventionStage.encadrantPedagogique',
+                'inscription.filiere',
+                'inscription.niveau',
+                'inscription.anneeUniversitaire',
+                'etudiant'
+            ])
+            ->where('num_demande', 'like', '%' . $validated['num_demande'] . '%')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $demande
+            ]);
+        }
+
+        // Sinon, vérifier l'étudiant et retourner toutes ses demandes
+        if (empty($validated['email']) || empty($validated['apogee']) || empty($validated['cin'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez fournir un numéro de demande ou vos informations complètes (email, Apogée, CIN).'
+            ], 422);
+        }
 
         // Vérifier que l'étudiant existe
         $etudiant = Etudiant::where('email', $validated['email'])
