@@ -26,11 +26,6 @@ export function Header() {
         <nav className="hidden md:flex items-center gap-1">
           {!isAdmin ? (
             <>
-              <Link to="/">
-                <Button variant="ghost" className={cn(location.pathname === "/" && "bg-accent")}>
-                  Accueil
-                </Button>
-              </Link>
               <Link to="/demande">
                 <Button variant="ghost" className={cn(location.pathname === "/demande" && "bg-accent")}>
                   Nouvelle demande
@@ -39,17 +34,6 @@ export function Header() {
               <Link to="/suivi">
                 <Button variant="ghost" className={cn(location.pathname === "/suivi" && "bg-accent")}>
                   Suivi
-                </Button>
-              </Link>
-              <Link to="/reclamation">
-                <Button variant="ghost" className={cn(location.pathname === "/reclamation" && "bg-accent")}>
-                  Réclamation
-                </Button>
-              </Link>
-              <div className="ml-4 h-6 w-px bg-border" />
-              <Link to="/admin">
-                <Button variant="outline" size="sm">
-                  Espace Admin
                 </Button>
               </Link>
             </>
@@ -75,12 +59,6 @@ export function Header() {
                   Réclamations
                 </Button>
               </Link>
-              <div className="ml-4 h-6 w-px bg-border" />
-              <Link to="/">
-                <Button variant="outline" size="sm">
-                  Espace Étudiant
-                </Button>
-              </Link>
             </>
           )}
         </nav>
@@ -102,11 +80,6 @@ export function Header() {
           <nav className="container flex flex-col py-4 gap-2">
             {!isAdmin ? (
               <>
-                <Link to="/" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start">
-                    Accueil
-                  </Button>
-                </Link>
                 <Link to="/demande" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
                     Nouvelle demande
@@ -115,17 +88,6 @@ export function Header() {
                 <Link to="/suivi" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start">
                     Suivi
-                  </Button>
-                </Link>
-                <Link to="/reclamation" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start">
-                    Réclamation
-                  </Button>
-                </Link>
-                <div className="my-2 h-px bg-border" />
-                <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="outline" className="w-full">
-                    Espace Admin
                   </Button>
                 </Link>
               </>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
+import { FileText, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -22,7 +23,6 @@ import {
 import {
   CheckCircle2,
   User,
-  FileText,
   Send,
   AlertCircle,
   Edit3,
@@ -39,6 +39,7 @@ type FormAction = DocumentType | "reclamation";
 
 export default function Demande() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
 
   // Identification data
