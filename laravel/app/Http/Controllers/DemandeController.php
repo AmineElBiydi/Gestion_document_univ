@@ -9,6 +9,9 @@ use App\Models\AttestationReussite;
 use App\Models\ReleveNotes;
 use App\Models\ConventionStage;
 use App\Models\Reclamation;
+use App\Models\Inscription;
+use App\Models\DecisionAnnee;
+use App\Models\Professeur;
 use App\Services\EmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -119,9 +122,25 @@ class DemandeController extends Controller
             // Générer un numéro de demande unique
             $numDemande = 'DEM-' . strtoupper(Str::random(8)) . '-' . date('Ymd');
 
+            // Optionally get inscription_id if provided
+            $inscriptionId = $request->input('inscription_id', null);
+            if ($inscriptionId) {
+                // Verify the inscription belongs to this student
+                $inscription = Inscription::where('id', $inscriptionId)
+                    ->where('etudiant_id', $etudiant->id)
+                    ->first();
+                if (!$inscription) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'L\'inscription fournie n\'appartient pas à cet étudiant.'
+                    ], 400);
+                }
+            }
+
             // Créer la demande
             $demande = Demande::create([
                 'etudiant_id' => $etudiant->id,
+                'inscription_id' => $inscriptionId,
                 'type_document' => $validated['type_document'],
                 'num_demande' => $numDemande,
                 'date_demande' => now(),
@@ -167,54 +186,54 @@ class DemandeController extends Controller
     {
         switch ($type) {
             case 'attestation_scolaire':
-                $request->validate([
-                    'niveau' => 'required|string',
-                    'filiere' => 'required|string',
-                    'annee_universitaire' => 'required|string',
-                ]);
-                
+                // Attestation scolaire now only needs demande_id (no additional fields)
                 AttestationScolaire::create([
                     'demande_id' => $demande->id,
-                    'niveau' => $request->niveau,
-                    'filiere' => $request->filiere,
-                    'annee_universitaire' => $request->annee_universitaire,
                 ]);
                 break;
 
             case 'attestation_reussite':
-                $request->validate([
-                    'filiere' => 'required|string',
-                    'annee_universitaire' => 'required|string',
-                    'cycle' => 'required|string',
-                    'session' => 'required|in:Normale,Rattrapage',
-                    'type_releve' => 'required|string',
+                // Requires decision_annee_id
+                $validated = $request->validate([
+                    'decision_annee_id' => 'required|exists:decisions_annee,id',
                 ]);
+                
+                // Verify the decision_annee belongs to the student's inscription if provided
+                if ($demande->inscription_id) {
+                    $decisionAnnee = DecisionAnnee::findOrFail($validated['decision_annee_id']);
+                    if ($decisionAnnee->inscription_id !== $demande->inscription_id) {
+                        throw new \Exception('La décision d\'année ne correspond pas à l\'inscription de la demande.');
+                    }
+                }
                 
                 AttestationReussite::create([
                     'demande_id' => $demande->id,
-                    'filiere' => $request->filiere,
-                    'annee_universitaire' => $request->annee_universitaire,
-                    'cycle' => $request->cycle,
-                    'session' => $request->input('session'),
-                    'type_releve' => $request->type_releve,
+                    'decision_annee_id' => $validated['decision_annee_id'],
                 ]);
                 break;
 
             case 'releve_notes':
-                $request->validate([
-                    'semestre' => 'required|string',
-                    'annee_universitaire' => 'required|string',
+                // Requires decision_annee_id
+                $validated = $request->validate([
+                    'decision_annee_id' => 'required|exists:decisions_annee,id',
                 ]);
+                
+                // Verify the decision_annee belongs to the student's inscription if provided
+                if ($demande->inscription_id) {
+                    $decisionAnnee = DecisionAnnee::findOrFail($validated['decision_annee_id']);
+                    if ($decisionAnnee->inscription_id !== $demande->inscription_id) {
+                        throw new \Exception('La décision d\'année ne correspond pas à l\'inscription de la demande.');
+                    }
+                }
                 
                 ReleveNotes::create([
                     'demande_id' => $demande->id,
-                    'semestre' => $request->semestre,
-                    'annee_universitaire' => $request->annee_universitaire,
+                    'decision_annee_id' => $validated['decision_annee_id'],
                 ]);
                 break;
 
             case 'convention_stage':
-                $request->validate([
+                $validated = $request->validate([
                     'date_debut' => 'required|date',
                     'date_fin' => 'required|date|after:date_debut',
                     'entreprise' => 'required|string',
@@ -222,23 +241,23 @@ class DemandeController extends Controller
                     'email_encadrant' => 'required|email',
                     'telephone_encadrant' => 'required|string',
                     'encadrant_entreprise' => 'required|string',
-                    'encadrant_pedagogique' => 'required|string',
+                    'encadrant_pedagogique_id' => 'nullable|exists:professeurs,id',
                     'fonction_encadrant' => 'required|string',
                     'sujet' => 'required|string',
                 ]);
                 
                 ConventionStage::create([
                     'demande_id' => $demande->id,
-                    'date_debut' => $request->date_debut,
-                    'date_fin' => $request->date_fin,
-                    'entreprise' => $request->entreprise,
-                    'adresse_entreprise' => $request->adresse_entreprise,
-                    'email_encadrant' => $request->email_encadrant,
-                    'telephone_encadrant' => $request->telephone_encadrant,
-                    'encadrant_entreprise' => $request->encadrant_entreprise,
-                    'encadrant_pedagogique' => $request->encadrant_pedagogique,
-                    'fonction_encadrant' => $request->fonction_encadrant,
-                    'sujet' => $request->sujet,
+                    'date_debut' => $validated['date_debut'],
+                    'date_fin' => $validated['date_fin'],
+                    'entreprise' => $validated['entreprise'],
+                    'adresse_entreprise' => $validated['adresse_entreprise'],
+                    'email_encadrant' => $validated['email_encadrant'],
+                    'telephone_encadrant' => $validated['telephone_encadrant'],
+                    'encadrant_entreprise' => $validated['encadrant_entreprise'],
+                    'encadrant_pedagogique_id' => $validated['encadrant_pedagogique_id'] ?? null,
+                    'fonction_encadrant' => $validated['fonction_encadrant'],
+                    'sujet' => $validated['sujet'],
                 ]);
                 break;
         }
@@ -323,8 +342,19 @@ class DemandeController extends Controller
             ], 404);
         }
 
-        // Récupérer toutes les demandes de l'étudiant
-        $demandes = Demande::with(['attestationScolaire', 'attestationReussite', 'releveNotes', 'conventionStage'])
+        // Récupérer toutes les demandes de l'étudiant avec leurs relations
+        $demandes = Demande::with([
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee.inscription.filiere',
+            'attestationReussite.decisionAnnee.inscription.niveau',
+            'attestationReussite.decisionAnnee.inscription.anneeUniversitaire',
+            'releveNotes.decisionAnnee.inscription.filiere',
+            'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
+            'conventionStage.encadrantPedagogique',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+        ])
             ->where('etudiant_id', $etudiant->id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -335,29 +365,38 @@ class DemandeController extends Controller
             
             switch ($demande->type_document) {
                 case 'attestation_scolaire':
-                    if ($demande->attestationScolaire) {
+                    if ($demande->attestationScolaire && $demande->inscription) {
+                        // Get details from inscription relationship
+                        $inscription = $demande->inscription;
                         $details = [
-                            'niveau' => $demande->attestationScolaire->niveau,
-                            'filiere' => $demande->attestationScolaire->filiere,
-                            'annee_universitaire' => $demande->attestationScolaire->annee_universitaire,
+                            'niveau' => $inscription->niveau->libelle ?? null,
+                            'filiere' => $inscription->filiere->nom_filiere ?? null,
+                            'annee_universitaire' => $inscription->anneeUniversitaire->libelle ?? null,
                         ];
                     }
                     break;
                 case 'attestation_reussite':
-                    if ($demande->attestationReussite) {
+                    if ($demande->attestationReussite && $demande->attestationReussite->decisionAnnee) {
+                        $decision = $demande->attestationReussite->decisionAnnee;
+                        $inscription = $decision->inscription;
                         $details = [
-                            'filiere' => $demande->attestationReussite->filiere,
-                            'annee_universitaire' => $demande->attestationReussite->annee_universitaire,
-                            'cycle' => $demande->attestationReussite->cycle,
-                            'session' => $demande->attestationReussite->session,
+                            'filiere' => $inscription->filiere->nom_filiere ?? null,
+                            'annee_universitaire' => $inscription->anneeUniversitaire->libelle ?? null,
+                            'decision' => $decision->decision,
+                            'mention' => $decision->mention,
+                            'moyenne' => $decision->moyenne_annuelle,
                         ];
                     }
                     break;
                 case 'releve_notes':
-                    if ($demande->releveNotes) {
+                    if ($demande->releveNotes && $demande->releveNotes->decisionAnnee) {
+                        $decision = $demande->releveNotes->decisionAnnee;
+                        $inscription = $decision->inscription;
                         $details = [
-                            'semestre' => $demande->releveNotes->semestre,
-                            'annee_universitaire' => $demande->releveNotes->annee_universitaire,
+                            'annee_universitaire' => $inscription->anneeUniversitaire->libelle ?? null,
+                            'decision' => $decision->decision,
+                            'moyenne' => $decision->moyenne_annuelle,
+                            'session' => $decision->type_session,
                         ];
                     }
                     break;
@@ -365,8 +404,11 @@ class DemandeController extends Controller
                     if ($demande->conventionStage) {
                         $details = [
                             'entreprise' => $demande->conventionStage->entreprise,
-                            'date_debut' => $demande->conventionStage->date_debut,
-                            'date_fin' => $demande->conventionStage->date_fin,
+                            'date_debut' => $demande->conventionStage->date_debut?->format('Y-m-d'),
+                            'date_fin' => $demande->conventionStage->date_fin?->format('Y-m-d'),
+                            'encadrant_pedagogique' => $demande->conventionStage->encadrantPedagogique 
+                                ? $demande->conventionStage->encadrantPedagogique->nom . ' ' . $demande->conventionStage->encadrantPedagogique->prenom
+                                : null,
                         ];
                     }
                     break;

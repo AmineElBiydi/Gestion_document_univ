@@ -11,15 +11,20 @@ class Demande extends Model
 
     protected $fillable = [
         'etudiant_id',
+        'inscription_id',
         'type_document',
         'num_demande',
         'date_demande',
         'status',
         'raison_refus',
+        'date_traitement',
+        'traite_par_admin_id',
+        'fichier_genere_path',
     ];
 
     protected $casts = [
         'date_demande' => 'date',
+        'date_traitement' => 'datetime',
     ];
 
     /**
@@ -28,6 +33,30 @@ class Demande extends Model
     public function etudiant()
     {
         return $this->belongsTo(Etudiant::class);
+    }
+
+    /**
+     * Relation avec l'inscription
+     */
+    public function inscription()
+    {
+        return $this->belongsTo(Inscription::class);
+    }
+
+    /**
+     * Relation avec l'admin qui a traité la demande
+     */
+    public function traiteParAdmin()
+    {
+        return $this->belongsTo(Admin::class, 'traite_par_admin_id');
+    }
+
+    /**
+     * Relation avec les réclamations
+     */
+    public function reclamations()
+    {
+        return $this->hasMany(Reclamation::class);
     }
 
     /**

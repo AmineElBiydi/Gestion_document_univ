@@ -18,7 +18,7 @@ class ConventionStage extends Model
         'email_encadrant',
         'telephone_encadrant',
         'encadrant_entreprise',
-        'encadrant_pedagogique',
+        'encadrant_pedagogique_id',
         'fonction_encadrant',
         'sujet',
     ];
@@ -28,8 +28,19 @@ class ConventionStage extends Model
         'date_fin' => 'date',
     ];
 
+    /**
+     * Relation avec la demande
+     */
     public function demande()
     {
         return $this->belongsTo(Demande::class);
+    }
+
+    /**
+     * Relation avec l'encadrant pédagogique (professeur)
+     */
+    public function encadrantPedagogique()
+    {
+        return $this->belongsTo(Professeur::class, 'encadrant_pedagogique_id');
     }
 }

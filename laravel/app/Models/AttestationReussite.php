@@ -11,15 +11,22 @@ class AttestationReussite extends Model
 
     protected $fillable = [
         'demande_id',
-        'filiere',
-        'annee_universitaire',
-        'cycle',
-        'session',
-        'type_releve',
+        'decision_annee_id',
     ];
 
+    /**
+     * Relation avec la demande
+     */
     public function demande()
     {
         return $this->belongsTo(Demande::class);
+    }
+
+    /**
+     * Relation avec la décision d'année
+     */
+    public function decisionAnnee()
+    {
+        return $this->belongsTo(DecisionAnnee::class);
     }
 }

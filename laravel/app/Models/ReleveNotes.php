@@ -11,12 +11,22 @@ class ReleveNotes extends Model
 
     protected $fillable = [
         'demande_id',
-        'semestre',
-        'annee_universitaire',
+        'decision_annee_id',
     ];
 
+    /**
+     * Relation avec la demande
+     */
     public function demande()
     {
         return $this->belongsTo(Demande::class);
+    }
+
+    /**
+     * Relation avec la décision d'année
+     */
+    public function decisionAnnee()
+    {
+        return $this->belongsTo(DecisionAnnee::class);
     }
 }

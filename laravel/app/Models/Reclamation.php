@@ -17,6 +17,12 @@ class Reclamation extends Model
         'status',
         'piece_jointe_path',
         'reponse',
+        'traite_par_admin_id',
+        'date_traitement',
+    ];
+
+    protected $casts = [
+        'date_traitement' => 'datetime',
     ];
 
     /**
@@ -33,6 +39,14 @@ class Reclamation extends Model
     public function demande()
     {
         return $this->belongsTo(Demande::class);
+    }
+
+    /**
+     * Relation avec l'admin qui a traité la réclamation
+     */
+    public function traiteParAdmin()
+    {
+        return $this->belongsTo(Admin::class, 'traite_par_admin_id');
     }
 
     /**

@@ -49,6 +49,10 @@ class AdminController extends Controller
                 'admin' => [
                     'id' => $admin->id,
                     'identifiant' => $admin->identifiant,
+                    'nom' => $admin->nom,
+                    'prenom' => $admin->prenom,
+                    'email' => $admin->email,
+                    'role' => $admin->role,
                 ],
                 'token' => $token,
             ]
@@ -226,7 +230,20 @@ class AdminController extends Controller
      */
     public function getDemandes(Request $request)
     {
-        $query = Demande::with(['etudiant', 'attestationScolaire', 'attestationReussite', 'releveNotes', 'conventionStage']);
+        $query = Demande::with([
+            'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee.inscription.filiere',
+            'attestationReussite.decisionAnnee.inscription.niveau',
+            'attestationReussite.decisionAnnee.inscription.anneeUniversitaire',
+            'releveNotes.decisionAnnee.inscription.filiere',
+            'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
+            'conventionStage.encadrantPedagogique',
+            'traiteParAdmin',
+        ]);
 
         // Filtres
         if ($request->has('status') && $request->status !== 'all') {
@@ -268,6 +285,8 @@ class AdminController extends Controller
 
         $demande->update([
             'status' => 'validee',
+            'date_traitement' => now(),
+            'traite_par_admin_id' => auth()->id(),
         ]);
 
         // Send email notification to student
@@ -299,6 +318,8 @@ class AdminController extends Controller
         $demande->update([
             'status' => 'rejetee',
             'raison_refus' => $request->raison,
+            'date_traitement' => now(),
+            'traite_par_admin_id' => auth()->id(),
         ]);
 
         // Envoyer email de refus à l'étudiant
@@ -318,10 +339,17 @@ class AdminController extends Controller
     {
         $demande = Demande::with([
             'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
             'attestationScolaire',
-            'attestationReussite',
-            'releveNotes',
-            'conventionStage'
+            'attestationReussite.decisionAnnee.inscription.filiere',
+            'attestationReussite.decisionAnnee.inscription.niveau',
+            'attestationReussite.decisionAnnee.inscription.anneeUniversitaire',
+            'releveNotes.decisionAnnee.inscription.filiere',
+            'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
+            'conventionStage.encadrantPedagogique',
+            'traiteParAdmin',
         ])->findOrFail($id);
 
         return response()->json([
@@ -358,7 +386,9 @@ class AdminController extends Controller
             });
         }
 
-        $reclamations = $query->orderBy('created_at', 'desc')->paginate(15);
+        $reclamations = $query->with(['traiteParAdmin'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
 
         return response()->json([
             'success' => true,
@@ -391,6 +421,8 @@ class AdminController extends Controller
         $reclamation->update([
             'status' => 'traitee',
             'reponse' => $validated['reponse'],
+            'date_traitement' => now(),
+            'traite_par_admin_id' => auth()->id(),
         ]);
 
         // Send email notification to student
@@ -420,7 +452,20 @@ class AdminController extends Controller
      */
     public function getHistorique(Request $request)
     {
-        $query = Demande::with(['etudiant', 'attestationScolaire', 'attestationReussite', 'releveNotes', 'conventionStage'])
+        $query = Demande::with([
+            'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee.inscription.filiere',
+            'attestationReussite.decisionAnnee.inscription.niveau',
+            'attestationReussite.decisionAnnee.inscription.anneeUniversitaire',
+            'releveNotes.decisionAnnee.inscription.filiere',
+            'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
+            'conventionStage.encadrantPedagogique',
+            'traiteParAdmin',
+        ])
             ->whereIn('status', ['validee', 'rejetee']);
 
         // Filtres
@@ -459,7 +504,19 @@ class AdminController extends Controller
      */
     public function getDemandesAttente(Request $request)
     {
-        $query = Demande::with(['etudiant', 'attestationScolaire', 'attestationReussite', 'releveNotes', 'conventionStage'])
+        $query = Demande::with([
+            'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee.inscription.filiere',
+            'attestationReussite.decisionAnnee.inscription.niveau',
+            'attestationReussite.decisionAnnee.inscription.anneeUniversitaire',
+            'releveNotes.decisionAnnee.inscription.filiere',
+            'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
+            'conventionStage.encadrantPedagogique',
+        ])
             ->where('status', 'en_attente');
 
         // Filtres
@@ -503,6 +560,8 @@ class AdminController extends Controller
         $demande->update([
             'status' => 'validee',
             'raison_refus' => null, // Effacer la raison de refus
+            'date_traitement' => now(),
+            'traite_par_admin_id' => auth()->id(),
         ]);
 
         // Send email notification to student

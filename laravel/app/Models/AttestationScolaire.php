@@ -11,11 +11,11 @@ class AttestationScolaire extends Model
 
     protected $fillable = [
         'demande_id',
-        'niveau',
-        'filiere',
-        'annee_universitaire',
     ];
 
+    /**
+     * Relation avec la demande
+     */
     public function demande()
     {
         return $this->belongsTo(Demande::class);

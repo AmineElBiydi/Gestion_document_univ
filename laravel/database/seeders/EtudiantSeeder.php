@@ -16,7 +16,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '12345678',
                 'cin' => 'AB123456',
                 'email' => 'student@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Bennani',
@@ -24,7 +24,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '87654321',
                 'cin' => 'CD789012',
                 'email' => 'etudiant@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Idrissi',
@@ -32,7 +32,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '11223344',
                 'cin' => 'EF345678',
                 'email' => 'youssef.idrissi@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Tazi',
@@ -40,7 +40,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '55667788',
                 'cin' => 'GH901234',
                 'email' => 'amina.tazi@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Fassi',
@@ -48,7 +48,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '99887766',
                 'cin' => 'IJ567890',
                 'email' => 'karim.fassi@universite.ma',
-                'status' => 'diplômé',
+                'status' => 'diplome',
             ],
             [
                 'nom' => 'El Amrani',
@@ -56,7 +56,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '23456789',
                 'cin' => 'KL234567',
                 'email' => 'sara.elamrani@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Mansouri',
@@ -64,7 +64,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '34567890',
                 'cin' => 'MN345678',
                 'email' => 'omar.mansouri@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Cherkaoui',
@@ -72,7 +72,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '45678901',
                 'cin' => 'OP456789',
                 'email' => 'leila.cherkaoui@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Jabrane',
@@ -80,7 +80,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '56789012',
                 'cin' => 'QR567890',
                 'email' => 'ahmed.jabrane@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Kabbouri',
@@ -88,7 +88,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '67890123',
                 'cin' => 'ST678901',
                 'email' => 'nadia.kabbouri@universite.ma',
-                'status' => 'diplômé',
+                'status' => 'diplome',
             ],
             [
                 'nom' => 'Bensalem',
@@ -96,7 +96,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '78901234',
                 'cin' => 'UV789012',
                 'email' => 'mehdi.bensalem@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'El Fihri',
@@ -104,7 +104,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '89012345',
                 'cin' => 'WX890123',
                 'email' => 'khadija.elfihri@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Rafik',
@@ -112,7 +112,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '90123456',
                 'cin' => 'YZ901234',
                 'email' => 'hassan.rafik@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Moussaoui',
@@ -120,7 +120,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '01234567',
                 'cin' => 'ZA012345',
                 'email' => 'imane.moussaoui@universite.ma',
-                'status' => 'inscrit',
+                'status' => 'actif',
             ],
             [
                 'nom' => 'Boudhrioua',
@@ -128,7 +128,7 @@ class EtudiantSeeder extends Seeder
                 'apogee' => '13579246',
                 'cin' => 'BC135792',
                 'email' => 'younes.boudhrioua@universite.ma',
-                'status' => 'diplômé',
+                'status' => 'diplome',
             ],
         ];
 

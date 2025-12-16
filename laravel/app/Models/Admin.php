@@ -12,7 +12,12 @@ class Admin extends Authenticatable
 
     protected $fillable = [
         'identifiant',
+        'nom',
+        'prenom',
+        'email',
         'password',
+        'role',
+        'est_actif',
     ];
 
     protected $hidden = [
@@ -23,6 +28,23 @@ class Admin extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'est_actif' => 'boolean',
         ];
+    }
+
+    /**
+     * Relation avec les demandes traitées
+     */
+    public function demandesTraitees()
+    {
+        return $this->hasMany(Demande::class, 'traite_par_admin_id');
+    }
+
+    /**
+     * Relation avec les réclamations traitées
+     */
+    public function reclamationsTraitees()
+    {
+        return $this->hasMany(Reclamation::class, 'traite_par_admin_id');
     }
 }
