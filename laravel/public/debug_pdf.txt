@@ -1,0 +1,52 @@
+--- START PDF GENERATION ---
+Decision missing, using fallback.
+ERROR: Impossible de générer le relevé : aucune inscription trouvée.
+#0 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\app\Services\EmailService.php(43): App\Services\PdfService->genererReleveNotes(Object(App\Models\Demande))
+#1 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\app\Http\Controllers\AdminController.php(291): App\Services\EmailService->envoyerValidationDemande(Object(App\Models\Demande))
+#2 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Routing\ControllerDispatcher.php(46): App\Http\Controllers\AdminController->validerDemande(Object(Illuminate\Http\Request), '66')
+#3 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Routing\Route.php(265): Illuminate\Routing\ControllerDispatcher->dispatch(Object(Illuminate\Routing\Route), Object(App\Http\Controllers\AdminController), 'validerDemande')
+#4 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Routing\Route.php(211): Illuminate\Routing\Route->runController()
+#5 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Routing\Router.php(822): Illuminate\Routing\Route->run()
+#6 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(180): Illuminate\Routing\Router->Illuminate\Routing\{closure}(Object(Illuminate\Http\Request))
+#7 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Routing\Middleware\SubstituteBindings.php(50): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#8 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Routing\Middleware\SubstituteBindings->handle(Object(Illuminate\Http\Request), Object(Closure))
+#9 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Auth\Middleware\Authenticate.php(63): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#10 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Auth\Middleware\Authenticate->handle(Object(Illuminate\Http\Request), Object(Closure), 'sanctum')
+#11 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#12 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Routing\Router.php(821): Illuminate\Pipeline\Pipeline->then(Object(Closure))
+#13 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Routing\Router.php(800): Illuminate\Routing\Router->runRouteWithinStack(Object(Illuminate\Routing\Route), Object(Illuminate\Http\Request))
+#14 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Routing\Router.php(764): Illuminate\Routing\Router->runRoute(Object(Illuminate\Http\Request), Object(Illuminate\Routing\Route))
+#15 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Routing\Router.php(753): Illuminate\Routing\Router->dispatchToRoute(Object(Illuminate\Http\Request))
+#16 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(200): Illuminate\Routing\Router->dispatch(Object(Illuminate\Http\Request))
+#17 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(180): Illuminate\Foundation\Http\Kernel->Illuminate\Foundation\Http\{closure}(Object(Illuminate\Http\Request))
+#18 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#19 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull.php(31): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle(Object(Illuminate\Http\Request), Object(Closure))
+#20 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull->handle(Object(Illuminate\Http\Request), Object(Closure))
+#21 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#22 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TrimStrings.php(51): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle(Object(Illuminate\Http\Request), Object(Closure))
+#23 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\TrimStrings->handle(Object(Illuminate\Http\Request), Object(Closure))
+#24 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePostSize.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#25 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\ValidatePostSize->handle(Object(Illuminate\Http\Request), Object(Closure))
+#26 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance.php(109): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#27 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance->handle(Object(Illuminate\Http\Request), Object(Closure))
+#28 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Http\Middleware\HandleCors.php(61): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#29 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\HandleCors->handle(Object(Illuminate\Http\Request), Object(Closure))
+#30 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Http\Middleware\TrustProxies.php(58): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#31 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\TrustProxies->handle(Object(Illuminate\Http\Request), Object(Closure))
+#32 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks.php(22): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#33 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks->handle(Object(Illuminate\Http\Request), Object(Closure))
+#34 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePathEncoding.php(26): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#35 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\ValidatePathEncoding->handle(Object(Illuminate\Http\Request), Object(Closure))
+#36 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#37 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(175): Illuminate\Pipeline\Pipeline->then(Object(Closure))
+#38 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(144): Illuminate\Foundation\Http\Kernel->sendRequestThroughRouter(Object(Illuminate\Http\Request))
+#39 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\Application.php(1220): Illuminate\Foundation\Http\Kernel->handle(Object(Illuminate\Http\Request))
+#40 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\public\index.php(20): Illuminate\Foundation\Application->handleRequest(Object(Illuminate\Http\Request))
+#41 C:\Users\PC\Desktop\GenieLogicielProject\Gestion_document_univ\laravel\vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php(23): require_once('C:\\Users\\PC\\Des...')
+#42 {main}
+--- START PDF GENERATION ---
+Decision missing, using fallback.
+Inscription in request is null. Trying to find latest student inscription.
+Rendering View...
+Saving PDF to documents/releve_notes_12345678_20251217103518.pdf...
+SUCCESS

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { DocumentRequest, documentTypeLabels } from "@/types";
 import { Link } from "react-router-dom";
+import ReleveNotesTemplate from "@/components/ReleveNotesTemplate";
 import { cn } from "@/lib/utils";
 import { apiEndpoints } from "@/lib/api";
 
@@ -67,11 +69,12 @@ const mockRequests: DocumentRequest[] = [
 export default function Suivi() {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Request number search state
   const [requestNumberSearch, setRequestNumberSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [selectedTranscript, setSelectedTranscript] = useState<DocumentRequest | null>(null);
+
   const [requests, setRequests] = useState<DocumentRequest[] | null>(null);
 
   const searchByRequestNumber = async () => {
@@ -83,10 +86,10 @@ export default function Suivi() {
         cin: "",
         num_demande: requestNumberSearch.trim() || undefined,
       });
-      
+
       if (response.data.success) {
         const demandes = response.data.data;
-        
+
         // Filter by request number if provided
         let filteredRequests = demandes;
         if (requestNumberSearch.trim()) {
@@ -94,7 +97,7 @@ export default function Suivi() {
             (r: any) => r.num_demande.toLowerCase().includes(requestNumberSearch.toLowerCase())
           );
         }
-        
+
         // Transform API data to frontend format
         const transformedRequests: DocumentRequest[] = filteredRequests.map((req: any) => ({
           id: req.id.toString(),
@@ -107,7 +110,7 @@ export default function Suivi() {
           details: req.details,
           documentUrl: req.status === 'validee' ? '#' : undefined,
         }));
-        
+
         setRequests(transformedRequests);
         toast.success(`${transformedRequests.length} demande(s) trouvée(s)`);
       } else {
@@ -222,11 +225,10 @@ export default function Suivi() {
                         <div key={step.id} className="flex items-center">
                           <div className="flex flex-col items-center">
                             <div
-                              className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                                step.completed
-                                  ? "bg-success text-success-foreground"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
+                              className={`flex h-8 w-8 items-center justify-center rounded-full ${step.completed
+                                ? "bg-success text-success-foreground"
+                                : "bg-muted text-muted-foreground"
+                                }`}
                             >
                               {step.completed ? (
                                 <CheckCircle2 className="h-4 w-4" />
@@ -240,9 +242,8 @@ export default function Suivi() {
                           </div>
                           {index < 2 && (
                             <div
-                              className={`h-0.5 w-16 sm:w-24 lg:w-32 mx-2 ${
-                                step.completed ? "bg-success" : "bg-muted"
-                              }`}
+                              className={`h-0.5 w-16 sm:w-24 lg:w-32 mx-2 ${step.completed ? "bg-success" : "bg-muted"
+                                }`}
                             />
                           )}
                         </div>
@@ -274,22 +275,83 @@ export default function Suivi() {
                       <h4 className="text-sm font-semibold text-foreground mb-3">
                         Détails de la demande
                       </h4>
-                      <div className="grid gap-2 sm:grid-cols-2 text-sm">
-                        {Object.entries(request.details).map(([key, value]) => (
-                          <div key={key} className="flex justify-between">
-                            <span className="text-muted-foreground capitalize">
-                              {key.replace(/([A-Z])/g, " $1").trim()}:
-                            </span>
-                            <span className="font-medium">{value}</span>
-                          </div>
-                        ))}
+                      <div className="space-y-4">
+                        {Object.entries(request.details).map(([key, value]) => {
+                          // Special rendering for 'resultats' (Transcript notes)
+                          if (key === 'resultats' && Array.isArray(value)) {
+                            return (
+                              <div key={key} className="col-span-full mt-2">
+                                <h5 className="text-sm font-medium mb-2 text-primary">Résultats académiques</h5>
+                                <div className="border rounded-md overflow-hidden bg-background">
+                                  <table className="w-full text-sm text-left">
+                                    <thead className="bg-muted text-muted-foreground">
+                                      <tr>
+                                        <th className="p-2 font-medium">Module</th>
+                                        <th className="p-2 font-medium text-center">Note</th>
+                                        <th className="p-2 font-medium text-right">Résultat</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                      {value.map((note: any, idx: number) => (
+                                        <tr key={idx} className="hover:bg-accent/5">
+                                          <td className="p-2">{note.module}</td>
+                                          <td className="p-2 text-center font-medium">
+                                            <span className={cn(
+                                              Number(note.note) >= 10 ? "text-green-600" : "text-destructive"
+                                            )}>
+                                              {note.note}/20
+                                            </span>
+                                          </td>
+                                          <td className="p-2 text-right">
+                                            <span className={cn(
+                                              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                                              note.resultat === 'Validé'
+                                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                            )}>
+                                              {note.resultat}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Standard key-value rendering
+                          if (typeof value !== 'object' || value === null) {
+                            return (
+                              <div key={key} className="flex justify-between text-sm border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                                <span className="text-muted-foreground capitalize">
+                                  {key.replace(/_/g, " ").trim()} :
+                                </span>
+                                <span className="font-medium text-foreground">{value}</span>
+                              </div>
+                            );
+                          }
+
+                          return null;
+                        })}
                       </div>
                     </div>
                   )}
 
                   {/* Actions */}
                   <div className="flex flex-wrap gap-3">
-                    {request.status === "validee" && request.documentUrl && (
+                    {request.status === "validee" && request.documentType === 'releve_notes' && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => setSelectedTranscript(request)}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Voir / Télécharger le Relevé
+                      </Button>
+                    )}
+                    {request.status === "validee" && request.documentType !== 'releve_notes' && request.documentUrl && (
                       <Button variant="default" size="sm">
                         <Download className="mr-2 h-4 w-4" />
                         Télécharger le document
@@ -305,10 +367,27 @@ export default function Suivi() {
                 </div>
               ))}
             </div>
-          )} 
+          )}
+
+          {selectedTranscript && (
+            <ReleveNotesTemplate
+              data={{
+                etudiant: {
+                  nom: selectedTranscript.etudiant?.nom || "Nom",
+                  prenom: selectedTranscript.etudiant?.prenom || "Prenom",
+                  apogee: selectedTranscript.studentId,
+                  cin: selectedTranscript.etudiant?.cin || "",
+                  date_naissance: selectedTranscript.etudiant?.date_naissance,
+                  lieu_naissance: selectedTranscript.etudiant?.lieu_naissance
+                },
+                details: selectedTranscript.details
+              }}
+              onClose={() => setSelectedTranscript(null)}
+            />
+          )}
 
 
-        
+
 
           {/* Empty State */}
           {!requests && (
@@ -320,7 +399,7 @@ export default function Suivi() {
                 Recherchez votre demande
               </h3>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Entrez le numéro de votre demande pour consulter 
+                Entrez le numéro de votre demande pour consulter
                 l'état de votre demande administrative.
               </p>
             </div>

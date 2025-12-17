@@ -30,11 +30,16 @@
                 <p><strong>Date de validation :</strong> {{ $demande->date_traitement->format('d/m/Y à H:i') }}</p>
             </div>
             
-            @if($demande->type_document === 'convention_stage')
-                <p>Vous trouverez votre convention de stage en pièce jointe de cet email.</p>
-                <p><strong>Important :</strong> Veuillez imprimer, signer et faire signer la convention par votre entreprise d'accueil.</p>
+            
+            @if($pdfPath)
+                <p>📎 <strong>Votre document est joint à cet email en format PDF.</strong></p>
+                <p>Vous pouvez également le télécharger à tout moment depuis votre espace de suivi des demandes.</p>
             @else
                 <p>Votre document est maintenant disponible. Vous pouvez le récupérer auprès du service de scolarité.</p>
+            @endif
+            
+            @if($demande->type_document === 'convention_stage' && $pdfPath)
+                <p><strong>Important :</strong> Veuillez imprimer, signer et faire signer la convention par votre entreprise d'accueil.</p>
             @endif
             
             <p>Merci de votre confiance.</p>

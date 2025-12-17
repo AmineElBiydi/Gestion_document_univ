@@ -1,21 +1,21 @@
-export type DocumentType = 
+export type DocumentType =
   | "attestation_scolaire"
   | "attestation_reussite"
   | "releve_notes"
   | "convention_stage";
 
-export type RequestStatus = 
+export type RequestStatus =
   | "en_attente"
   | "en_cours"
   | "validee"
   | "rejetee";
 
-export type ReclamationStatus = 
+export type ReclamationStatus =
   | "non_traitee"
   | "en_cours"
   | "traitee";
 
-export type ReclamationType = 
+export type ReclamationType =
   | "retard"
   | "refus_injustifie"
   | "document_incorrect"
@@ -30,18 +30,21 @@ export interface Student {
   prenom: string;
   filiere: string;
   niveau: string;
+  date_naissance?: string;
+  lieu_naissance?: string;
 }
 
 export interface DocumentRequest {
   id: string;
   requestNumber: string;
   studentId: string;
-  student?: Student;
+  // mapped from backend 'etudiant' object
+  etudiant?: Student;
   documentType: DocumentType;
   status: RequestStatus;
   createdAt: Date;
   updatedAt: Date;
-  details: Record<string, string>;
+  details: Record<string, any>;
   refusalReason?: string;
   documentUrl?: string;
 }

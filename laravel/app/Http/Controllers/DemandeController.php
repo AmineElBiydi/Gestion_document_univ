@@ -90,12 +90,26 @@ class DemandeController extends Controller
 
         // Step 3: Relationship check - only if all three fields are filled and valid
         $studentExists = false;
+        $anneesUniversitaires = [];
+        
         if ($emailPatternValid && $apogeePatternValid && $cinPatternValid) {
             $student = Etudiant::where('email', $email)
                 ->where('apogee', $apogee)
                 ->where('cin', $cin)
                 ->first();
             $studentExists = $student !== null;
+            
+            // Si l'étudiant existe, récupérer ses années universitaires
+            if ($studentExists) {
+                $anneesUniversitaires = $student->inscriptions()
+                    ->with('anneeUniversitaire')
+                    ->get()
+                    ->pluck('anneeUniversitaire.libelle')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->toArray();
+            }
         }
 
         return response()->json([
@@ -104,7 +118,8 @@ class DemandeController extends Controller
             'cin_valid' => $cinExists,
             'student_valid' => $studentExists,
             'all_valid' => $studentExists,
-            'error_type' => $studentExists ? 'none' : 'relationship'
+            'error_type' => $studentExists ? 'none' : 'relationship',
+            'annees_universitaires' => $anneesUniversitaires
         ]);
     }
 
@@ -144,6 +159,26 @@ class DemandeController extends Controller
 
             // Optionally get inscription_id if provided
             $inscriptionId = $request->input('inscription_id', null);
+
+            // Logic to find inscription based on year if not provided
+            if (!$inscriptionId && $request->has('annee_universitaire')) {
+                $anneeLibelle = $request->input('annee_universitaire');
+                
+                // Find the academic year
+                $annee = \App\Models\AnneeUniversitaire::where('libelle', $anneeLibelle)->first();
+                
+                if ($annee) {
+                    // Find the inscription for this student and this year
+                    $inscription = Inscription::where('etudiant_id', $etudiant->id)
+                        ->where('annee_id', $annee->id)
+                        ->first();
+                        
+                    if ($inscription) {
+                        $inscriptionId = $inscription->id;
+                    }
+                }
+            }
+
             if ($inscriptionId) {
                 // Verify the inscription belongs to this student
                 $inscription = Inscription::where('id', $inscriptionId)
@@ -214,7 +249,7 @@ class DemandeController extends Controller
 
             case 'attestation_reussite':
                 // Accept text values from frontend, try to find matching decision_annee_id
-                // If not found, create with null decision_annee_id
+                // If inscription exists, link to decision. Otherwise create without decision.
                 $decisionAnneeId = null;
                 
                 if ($demande->inscription_id) {
@@ -227,7 +262,7 @@ class DemandeController extends Controller
                         $decisionAnneeId = $decisionAnnee->id;
                     }
                 }
-                
+
                 AttestationReussite::create([
                     'demande_id' => $demande->id,
                     'decision_annee_id' => $decisionAnneeId,
@@ -236,7 +271,7 @@ class DemandeController extends Controller
 
             case 'releve_notes':
                 // Accept text values from frontend, try to find matching decision_annee_id
-                // If not found, create with null decision_annee_id
+                // If inscription exists, link to decision. Otherwise create without decision.
                 $decisionAnneeId = null;
                 
                 if ($demande->inscription_id) {
@@ -249,7 +284,7 @@ class DemandeController extends Controller
                         $decisionAnneeId = $decisionAnnee->id;
                     }
                 }
-                
+
                 ReleveNotes::create([
                     'demande_id' => $demande->id,
                     'decision_annee_id' => $decisionAnneeId,
@@ -450,11 +485,25 @@ class DemandeController extends Controller
                     if ($demande->releveNotes && $demande->releveNotes->decisionAnnee) {
                         $decision = $demande->releveNotes->decisionAnnee;
                         $inscription = $decision->inscription;
+                        
+                        // Get notes with modules
+                        $notes = $inscription->notes()->with('moduleNiveau.module')->get()->map(function($note) {
+                            return [
+                                'module' => $note->moduleNiveau->module->nom_module ?? 'Module inconnu',
+                                'note' => $note->note,
+                                'resultat' => $note->est_valide ? 'Validé' : 'Non Validé',
+                            ];
+                        });
+
                         $details = [
                             'annee_universitaire' => $inscription->anneeUniversitaire->libelle ?? null,
+                            'niveau' => $inscription->niveau->libelle ?? null,
+                            'filiere' => $inscription->filiere->nom_filiere ?? null,
                             'decision' => $decision->decision,
                             'moyenne' => $decision->moyenne_annuelle,
+                            'mention' => $decision->mention,
                             'session' => $decision->type_session,
+                            'resultats' => $notes
                         ];
                     }
                     break;
@@ -488,6 +537,9 @@ class DemandeController extends Controller
                     'prenom' => $etudiant->prenom,
                     'email' => $etudiant->email,
                     'apogee' => $etudiant->apogee,
+                    'cin' => $etudiant->cin,
+                    'date_naissance' => $etudiant->date_naissance, // formatted in frontend or keep as is
+                    'lieu_naissance' => $etudiant->lieu_naissance,
                 ]
             ];
         });
@@ -496,5 +548,64 @@ class DemandeController extends Controller
             'success' => true,
             'data' => $demandesTransformees
         ]);
+    }
+
+    /**
+     * Télécharger le PDF d'une demande validée
+     */
+    public function downloadPdf($num_demande)
+    {
+        $demande = Demande::where('num_demande', $num_demande)
+            ->where('status', 'validee')
+            ->first();
+
+        if (!$demande) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Demande non trouvée ou non validée.'
+            ], 404);
+        }
+
+        $pdfService = app(\App\Services\PdfService::class);
+        
+        try {
+            $pdfPath = null;
+            
+            switch ($demande->type_document) {
+                case 'releve_notes':
+                    $pdfPath = $pdfService->genererReleveNotes($demande);
+                    $filename = 'Releve_Notes.pdf';
+                    break;
+                case 'attestation_scolaire':
+                    $pdfPath = $pdfService->genererAttestationScolaire($demande);
+                    $filename = 'Attestation_Scolarite.pdf';
+                    break;
+                case 'attestation_reussite':
+                    $pdfPath = $pdfService->genererAttestationReussite($demande);
+                    $filename = 'Attestation_Reussite.pdf';
+                    break;
+                case 'convention_stage':
+                    $pdfPath = $pdfService->genererConventionStage($demande);
+                    $filename = 'Convention_Stage.pdf';
+                    break;
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Type de document non supporté.'
+                    ], 400);
+            }
+
+            return response()->download(
+                storage_path('app/' . $pdfPath),
+                $filename,
+                ['Content-Type' => 'application/pdf']
+            );
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la génération du PDF: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

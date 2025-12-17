@@ -46,7 +46,7 @@ export default function Demande() {
   const [email, setEmail] = useState("");
   const [apogee, setApogee] = useState("");
   const [cin, setCin] = useState("");
-  
+
   // Validation state
   const [isIdentificationValid, setIsIdentificationValid] = useState(false);
   const [isIdentificationLocked, setIsIdentificationLocked] = useState(false);
@@ -60,7 +60,8 @@ export default function Demande() {
   // Document/Action data
   const [selectedAction, setSelectedAction] = useState<FormAction | "">("");
   const [details, setDetails] = useState<Record<string, string>>({});
-  
+  const [studentAnneesUniversitaires, setStudentAnneesUniversitaires] = useState<string[]>([]);
+
   // Reclamation data
   const [requestNumber, setRequestNumber] = useState("");
   const [reclamationType, setReclamationType] = useState<ReclamationType | "">("");
@@ -90,30 +91,32 @@ export default function Demande() {
   const validateIdentificationRealtime = async () => {
     // Only validate if we have some input
     if (!email && !apogee && !cin) return;
-    
+
     try {
       const response = await apiEndpoints.validateStudent({
         email: email || "",
         apogee: apogee || "",
         cin: cin || ""
       });
-      
+
       const validation = response.data;
       setFieldValidation({
         email: validation.email_valid,
         apogee: validation.apogee_valid,
         cin: validation.cin_valid
       });
-      
+
       // Only unlock if all three fields match the SAME student
       if (validation.all_valid) {
         setIsIdentificationValid(true);
         setIsIdentificationLocked(true);
         setIdentificationError("");
+        // Récupérer les années universitaires de l'étudiant
+        setStudentAnneesUniversitaires(validation.annees_universitaires || []);
       } else {
         setIsIdentificationValid(false);
         setIsIdentificationLocked(false);
-        
+
         // Set appropriate error message based on error type
         switch (validation.error_type) {
           case 'pattern':
@@ -141,6 +144,7 @@ export default function Demande() {
     setIsIdentificationValid(false);
     setIdentificationError("");
     setFieldValidation({ email: false, apogee: false, cin: false });
+    setStudentAnneesUniversitaires([]);
     // Reset document data when identification is modified after filling
     if (hasFilledDocumentDetails) {
       setSelectedAction("");
@@ -181,7 +185,7 @@ export default function Demande() {
 
   const isFormComplete = () => {
     if (!isIdentificationValid || !selectedAction) return false;
-    
+
     // Check required details based on document type
     switch (selectedAction) {
       case "attestation_scolaire":
@@ -189,7 +193,7 @@ export default function Demande() {
       case "attestation_reussite":
         return details.annee;
       case "releve_notes":
-        return details.semestre && details.annee && details.typeReleve;
+        return details.annee;
       case "convention_stage":
         return details.entreprise && details.adresse && details.dateDebut && details.dateFin && details.encadrant && details.sujet;
       case "reclamation":
@@ -204,9 +208,9 @@ export default function Demande() {
       toast.error("Veuillez vérifier vos informations d'identification");
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       if (selectedAction === "reclamation") {
         // Create FormData for file upload
@@ -214,13 +218,13 @@ export default function Demande() {
         formData.append('num_demande', requestNumber);
         formData.append('type', reclamationType);
         formData.append('description', reclamationDescription);
-        
+
         if (attachment) {
           formData.append('piece_jointe', attachment);
         }
 
         const response = await apiEndpoints.createReclamation(formData);
-        
+
         if (response.data.success) {
           toast.success("Réclamation envoyée avec succès !");
           navigate("/suivi");
@@ -251,7 +255,6 @@ export default function Demande() {
             requestData.type_releve = "officiel"; // Default value
             break;
           case "releve_notes":
-            requestData.semestre = details.semestre;
             requestData.annee_universitaire = details.annee;
             break;
           case "convention_stage":
@@ -269,7 +272,7 @@ export default function Demande() {
         }
 
         const response = await apiEndpoints.createDemande(requestData);
-        
+
         if (response.data.success) {
           const newRequestNumber = response.data.data.num_demande;
           toast.success(`Demande enregistrée avec succès ! Numéro: ${newRequestNumber}`);
@@ -407,7 +410,7 @@ export default function Demande() {
 
   const renderDetailsFields = () => {
     if (!selectedAction) return null;
-    
+
     if (selectedAction === "reclamation") {
       return renderReclamationFields();
     }
@@ -479,33 +482,12 @@ export default function Demande() {
               </SelectContent>
             </Select>
           </div>
-         \
+          \
         </>
       ),
       releve_notes: (
         <>
-          <div className="space-y-2">
-            <Label htmlFor="semestre">Semestre *</Label>
-            <Select
-              value={details.semestre || ""}
-              onValueChange={(v) => {
-                setDetails({ ...details, semestre: v });
-                setHasFilledDocumentDetails(true);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez le semestre" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="S1">Semestre 1</SelectItem>
-                <SelectItem value="S2">Semestre 2</SelectItem>
-                <SelectItem value="S3">Semestre 3</SelectItem>
-                <SelectItem value="S4">Semestre 4</SelectItem>
-                <SelectItem value="S5">Semestre 5</SelectItem>
-                <SelectItem value="S6">Semestre 6</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
           <div className="space-y-2">
             <Label htmlFor="annee">Année universitaire *</Label>
             <Select
@@ -525,24 +507,7 @@ export default function Demande() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="type">Type de relevé *</Label>
-            <Select
-              value={details.typeReleve || ""}
-              onValueChange={(v) => {
-                setDetails({ ...details, typeReleve: v });
-                setHasFilledDocumentDetails(true);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez le type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="officiel">Officiel</SelectItem>
-                <SelectItem value="non_officiel">Non officiel</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
         </>
       ),
       convention_stage: (
@@ -662,9 +627,9 @@ export default function Demande() {
                   </div>
                 </div>
                 {isIdentificationLocked && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleModifyIdentification}
                     className="gap-2"
                   >
@@ -826,8 +791,8 @@ export default function Demande() {
 
             {/* Submit Button */}
             <div className="flex justify-end">
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 disabled={isLoading || !isFormComplete() || !isIdentificationValid}
                 variant="success"
                 className="gap-2 w-full sm:w-auto"

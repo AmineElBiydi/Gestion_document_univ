@@ -34,20 +34,31 @@ class EmailService
     {
         try {
             $pdfPath = null;
+            $pdfService = app(PdfService::class);
             
-            // Generate PDF for convention de stage
-            if ($demande->type_document === 'convention_stage') {
-                $pdfGenerator = new ConventionStagePDF();
-                $pdfPath = $pdfGenerator->generate($demande);
+            // Générer le PDF selon le type de document
+            try {
+                switch ($demande->type_document) {
+                    case 'releve_notes':
+                        $pdfPath = $pdfService->genererReleveNotes($demande);
+                        break;
+                    case 'attestation_scolaire':
+                        $pdfPath = $pdfService->genererAttestationScolaire($demande);
+                        break;
+                    case 'attestation_reussite':
+                        $pdfPath = $pdfService->genererAttestationReussite($demande);
+                        break;
+                    case 'convention_stage':
+                        $pdfPath = $pdfService->genererConventionStage($demande);
+                        break;
+                }
+            } catch (\Exception $e) {
+                \Log::error('Erreur génération PDF: ' . $e->getMessage());
+                // Continue sans PDF si la génération échoue
             }
             
             Mail::to($demande->etudiant->email)->send(new DemandeValidee($demande, $pdfPath));
             \Log::info('Email validation demande envoyé: ' . $demande->num_demande);
-            
-            // Clean up temporary PDF file
-            if ($pdfPath && file_exists($pdfPath)) {
-                unlink($pdfPath);
-            }
             
             return true;
         } catch (\Exception $e) {

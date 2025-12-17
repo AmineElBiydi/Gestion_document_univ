@@ -39,10 +39,27 @@ class DemandeValidee extends Mailable
 
     public function attachments(): array
     {
-        if ($this->pdfPath && file_exists($this->pdfPath)) {
+        if ($this->pdfPath) {
+            // Déterminer le nom du fichier selon le type
+            $filename = 'document.pdf';
+            switch ($this->demande->type_document) {
+                case 'releve_notes':
+                    $filename = 'Releve_Notes.pdf';
+                    break;
+                case 'attestation_scolaire':
+                    $filename = 'Attestation_Scolarite.pdf';
+                    break;
+                case 'attestation_reussite':
+                    $filename = 'Attestation_Reussite.pdf';
+                    break;
+                case 'convention_stage':
+                    $filename = 'Convention_Stage.pdf';
+                    break;
+            }
+            
             return [
-                Attachment::fromPath($this->pdfPath)
-                    ->as('Convention_Stage.pdf')
+                Attachment::fromStorage($this->pdfPath)
+                    ->as($filename)
                     ->withMime('application/pdf'),
             ];
         }
