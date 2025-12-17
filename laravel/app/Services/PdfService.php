@@ -3,237 +3,510 @@
 namespace App\Services;
 
 use App\Models\Demande;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Etudiant;
 use Illuminate\Support\Facades\Storage;
 
-class PdfService
+class PDFService
 {
     /**
-     * Générer le PDF d'un relevé de notes
+     * Generate PDF for a demande
+     * 
+     * @param Demande $demande
+     * @return string Path to generated PDF
      */
-    public function genererReleveNotes(Demande $demande): string
+    public function generatePDF(Demande $demande)
     {
-        file_put_contents(public_path('debug_pdf.txt'), "--- START PDF GENERATION ---\n", FILE_APPEND);
-        try {
-            // Charger les relations nécessaires
-            $demande->load([
-                'etudiant',
-                'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
-                'releveNotes.decisionAnnee.inscription.niveau',
-                'releveNotes.decisionAnnee.inscription.filiere',
-                'releveNotes.decisionAnnee.inscription.notes.moduleNiveau.module'
-            ]);
-
-            $releveNotes = $demande->releveNotes;
-            
-            if (!$releveNotes) {
-                throw new \Exception("Aucune information de relevé de notes trouvée.");
-            }
-
-            $decision = $releveNotes->decisionAnnee;
-            $inscription = null;
-
-            // Fallback si pas de décision liée (problème de données/seeders)
-            if (!$decision) {
-                file_put_contents(public_path('debug_pdf.txt'), "Decision missing, using fallback.\n", FILE_APPEND);
-                // Tenter de récupérer l'inscription via la demande
-                $demande->load('inscription.anneeUniversitaire', 'inscription.niveau', 'inscription.filiere');
-                $inscription = $demande->inscription;
-                
-                if (!$inscription) {
-                file_put_contents(public_path('debug_pdf.txt'), "Inscription in request is null. Trying to find latest student inscription.\n", FILE_APPEND);
-                // Last resort: Get the latest inscription for this student
-                $latestInscription = \App\Models\Inscription::where('etudiant_id', $demande->etudiant_id)
-                    ->with(['anneeUniversitaire', 'niveau', 'filiere'])
-                    ->latest('created_at')
-                    ->first();
-
-                if ($latestInscription) {
-                    $inscription = $latestInscription;
-                } else {
-                    file_put_contents(public_path('debug_pdf.txt'), "No inscription found for student. Creating DUMMY inscription.\n", FILE_APPEND);
-                    // Absolute fallback: Create a dummy inscription object
-                    $inscription = (object)[
-                        'anneeUniversitaire' => (object)['libelle' => 'N/A'],
-                        'niveau' => (object)['libelle' => 'N/A', 'code_niveau' => 'N/A'],
-                        'filiere' => (object)['nom_filiere' => 'N/A'],
-                        'niveau_id' => null,
-                        'filiere_id' => null,
-                        // Add this method to avoid error when calling notes()
-                        'notes' => function() { return new class { public function with() { return $this; } public function get() { return collect([]); } }; },
-                        // Mock the relation for the view
-                        'getAttribute' => function($key) { return null; }
-                    ];
-                    
-                    // Since it's a dummy object and not a model, we can't call notes() on it in the next step.
-                    // We need to handle that flag.
-                }
-            }
-
-            // Créer un objet décision factice pour la vue
-            $decision = (object)[
-                'inscription' => $inscription,
-                'decision' => 'N/A',
-                'mention' => 'N/A',
-                'moyenne_annuelle' => 0.00,
-                'type_session' => 'normale',
-                'created_at' => now()
-            ];
-        } else {
-            $inscription = $decision->inscription;
-        }
+        // Load all necessary relationships
+        $demande->load([
+            'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee',
+            'releveNotes.decisionAnnee',
+            'conventionStage'
+        ]);
+        
         $etudiant = $demande->etudiant;
         
-        // Récupérer les notes
-        // Check if inscription is a real model or our dummy object
-        if ($inscription instanceof \App\Models\Inscription) {
-            $notes = $inscription->notes()
-                ->with('moduleNiveau.module')
-                ->get();
-        } else {
-            $notes = collect([]);
-        }
-
-            // Si aucune note n'est trouvée (ex: problème de seeders), générer des entrées N/A pour les modules attendus
-            if ($notes->isEmpty()) {
-                file_put_contents(public_path('debug_pdf.txt'), "Notes missing, generating placeholders.\n", FILE_APPEND);
-                $modulesNiveau = \App\Models\ModuleNiveau::where('niveau_id', $inscription->niveau_id)
-                    ->where('filiere_id', $inscription->filiere_id)
-                    ->with('module')
-                    ->get();
-                
-                if ($modulesNiveau->isNotEmpty()) {
-                    $notes = $modulesNiveau->map(function($mn) {
-                        return (object)[
-                            'moduleNiveau' => $mn,
-                            'note' => 'N/A',
-                            'est_valide' => null
-                        ];
-                    });
-                }
-            }
-
-            // Générer le PDF
-            file_put_contents(public_path('debug_pdf.txt'), "Rendering View...\n", FILE_APPEND);
-            $pdf = Pdf::loadView('pdf.releve_notes', [
-                'etudiant' => $etudiant,
-                'decision' => $decision,
-                'notes' => $notes,
-            ]);
-
-            // Nom du fichier
-            $filename = 'releve_notes_' . $etudiant->apogee . '_' . now()->format('YmdHis') . '.pdf';
-            $filepath = 'documents/' . $filename;
-
-            // Ensure directory exists
-            if (!Storage::exists('documents')) {
-                Storage::makeDirectory('documents');
-            }
-
-            // Sauvegarder le PDF
-            file_put_contents(public_path('debug_pdf.txt'), "Saving PDF to $filepath...\n", FILE_APPEND);
-            Storage::put($filepath, $pdf->output());
-
-            file_put_contents(public_path('debug_pdf.txt'), "SUCCESS\n", FILE_APPEND);
-            return $filepath;
-
-        } catch (\Exception $e) {
-            file_put_contents(public_path('debug_pdf.txt'), "ERROR: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
-            throw $e;
+        // Generate PDF based on document type
+        switch ($demande->type_document) {
+            case 'attestation_scolaire':
+                return $this->generateAttestationScolaire($demande, $etudiant);
+            case 'attestation_reussite':
+                return $this->generateAttestationReussite($demande, $etudiant);
+            case 'releve_notes':
+                return $this->generateReleveNotes($demande, $etudiant);
+            case 'convention_stage':
+                return $this->generateConventionStage($demande, $etudiant);
+            default:
+                throw new \Exception('Type de document non supporté');
         }
     }
 
     /**
-     * Générer le PDF d'une attestation de scolarité
+     * Generate Attestation de Scolarité PDF
      */
-    public function genererAttestationScolaire(Demande $demande): string
+    private function generateAttestationScolaire(Demande $demande, Etudiant $etudiant)
     {
-        $demande->load([
-            'etudiant',
-            'inscription.anneeUniversitaire',
-            'inscription.niveau',
-            'inscription.filiere'
-        ]);
-
-        $etudiant = $demande->etudiant;
+        // Get inscription details
         $inscription = $demande->inscription;
-
-        $pdf = Pdf::loadView('pdf.attestation_scolaire', [
-            'etudiant' => $etudiant,
-            'inscription' => $inscription,
-            'demande' => $demande,
-        ]);
-
-        $filename = 'attestation_scolaire_' . $etudiant->apogee . '_' . now()->format('YmdHis') . '.pdf';
-        $filepath = 'documents/' . $filename;
-
-        Storage::put($filepath, $pdf->output());
-
-        return $filepath;
-    }
-
-    /**
-     * Générer le PDF d'une attestation de réussite
-     */
-    public function genererAttestationReussite(Demande $demande): string
-    {
-        $demande->load([
-            'etudiant',
-            'attestationReussite.decisionAnnee.inscription.anneeUniversitaire',
-            'attestationReussite.decisionAnnee.inscription.niveau',
-            'attestationReussite.decisionAnnee.inscription.filiere'
-        ]);
-
-        $attestation = $demande->attestationReussite;
         
-        if (!$attestation || !$attestation->decisionAnnee) {
-            throw new \Exception("Aucune décision trouvée pour cette attestation.");
+        // Prepare data for the template
+        $data = [
+            'nom' => strtoupper($etudiant->nom),
+            'prenom' => ucfirst(strtolower($etudiant->prenom)),
+            'cin' => $etudiant->cin,
+            'apogee' => $etudiant->apogee,
+            'date_naissance' => $etudiant->date_naissance ? $etudiant->date_naissance->format('d/m/Y') : '',
+            'lieu_naissance' => $etudiant->lieu_naissance ?? '',
+            'annee_universitaire' => $inscription && $inscription->anneeUniversitaire 
+                ? $inscription->anneeUniversitaire->libelle 
+                : now()->format('Y') . '/' . (now()->year + 1),
+            'diplome' => $inscription && $inscription->filiere 
+                ? $inscription->filiere->diplome ?? 'Années Préparatoires au Cycle Ingénieur'
+                : 'Années Préparatoires au Cycle Ingénieur',
+            'filiere' => $inscription && $inscription->filiere 
+                ? $inscription->filiere->nom_filiere 
+                : 'Années Préparatoires',
+            'annee' => $inscription && $inscription->niveau 
+                ? $inscription->niveau->libelle 
+                : '',
+            'date_emission' => now()->format('d/m/Y'),
+            'num_demande' => $demande->num_demande,
+            'num_etudiant' => $etudiant->apogee,
+            'adresse' => "M'Hannech II",
+            'bp' => 'B.P. 2222 Tétouan',
+            'tel' => '0539968802',
+            'fax' => '0539984624',
+        ];
+
+        // Generate HTML content
+        $html = $this->getAttestationScolaireTemplate($data);
+        
+        // Convert HTML to PDF
+        $filename = 'attestation_scolaire_' . $demande->num_demande . '.pdf';
+        $path = storage_path('app/public/documents/' . $filename);
+        
+        // Ensure directory exists
+        if (!file_exists(dirname($path))) {
+            mkdir(dirname($path), 0755, true);
         }
-
-        $decision = $attestation->decisionAnnee;
-        $etudiant = $demande->etudiant;
-
-        $pdf = Pdf::loadView('pdf.attestation_reussite', [
-            'etudiant' => $etudiant,
-            'decision' => $decision,
-            'demande' => $demande,
-        ]);
-
-        $filename = 'attestation_reussite_' . $etudiant->apogee . '_' . now()->format('YmdHis') . '.pdf';
-        $filepath = 'documents/' . $filename;
-
-        Storage::put($filepath, $pdf->output());
-
-        return $filepath;
+        
+        $this->generatePDFFromHTML($html, $path);
+        
+        return $path;
     }
 
     /**
-     * Générer le PDF d'une convention de stage
+     * Generate Attestation de Réussite PDF
      */
-    public function genererConventionStage(Demande $demande): string
+    private function generateAttestationReussite(Demande $demande, Etudiant $etudiant)
     {
-        $demande->load([
-            'etudiant',
-            'conventionStage.encadrantPedagogique',
-            'inscription.anneeUniversitaire',
-            'inscription.niveau',
-            'inscription.filiere'
-        ]);
+        $attestation = $demande->attestationReussite;
+        $decision = $attestation ? $attestation->decisionAnnee : null;
+        $inscription = $decision ? $decision->inscription : null;
+        
+        $data = [
+            'studentName' => $etudiant->nom . ' ' . $etudiant->prenom,
+            'cinNumber' => $etudiant->cin,
+            'apogeeNumber' => $etudiant->apogee,
+            'academicYear' => $inscription ? $inscription->anneeUniversitaire->libelle : 'N/A',
+            'filiere' => $inscription && $inscription->filiere ? $inscription->filiere->nom_filiere : 'N/A',
+            'decision' => $decision ? $decision->decision : 'N/A',
+            'mention' => $decision ? $decision->mention : 'N/A',
+            'moyenne' => $decision ? $decision->moyenne_annuelle : 'N/A',
+            'dateIssued' => now()->format('d/m/Y'),
+            'requestNumber' => $demande->num_demande,
+        ];
 
-        $convention = $demande->conventionStage;
-        $etudiant = $demande->etudiant;
+        $html = $this->getAttestationReussiteTemplate($data);
+        
+        $filename = 'attestation_reussite_' . $demande->num_demande . '.pdf';
+        $path = storage_path('app/public/documents/' . $filename);
+        
+        if (!file_exists(dirname($path))) {
+            mkdir(dirname($path), 0755, true);
+        }
+        
+        $this->generatePDFFromHTML($html, $path);
+        
+        return $path;
+    }
 
-        $pdf = Pdf::loadView('pdf.convention_stage', [
-            'etudiant' => $etudiant,
-            'convention' => $convention,
-            'demande' => $demande,
-        ]);
+    /**
+     * Generate Relevé de Notes PDF
+     */
+    private function generateReleveNotes(Demande $demande, Etudiant $etudiant)
+    {
+        $filename = 'releve_notes_' . $demande->num_demande . '.pdf';
+        $path = storage_path('app/public/documents/' . $filename);
+        
+        if (!file_exists(dirname($path))) {
+            mkdir(dirname($path), 0755, true);
+        }
+        
+        $html = '<h1>Relevé de Notes</h1><p>Document en cours de développement</p>';
+        $this->generatePDFFromHTML($html, $path);
+        
+        return $path;
+    }
 
-        $filename = 'convention_stage_' . $etudiant->apogee . '_' . now()->format('YmdHis') . '.pdf';
-        $filepath = 'documents/' . $filename;
+    /**
+     * Generate Convention de Stage PDF
+     */
+    private function generateConventionStage(Demande $demande, Etudiant $etudiant)
+    {
+        $filename = 'convention_stage_' . $demande->num_demande . '.pdf';
+        $path = storage_path('app/public/documents/' . $filename);
+        
+        if (!file_exists(dirname($path))) {
+            mkdir(dirname($path), 0755, true);
+        }
+        
+        $html = '<h1>Convention de Stage</h1><p>Document en cours de développement</p>';
+        $this->generatePDFFromHTML($html, $path);
+        
+        return $path;
+    }
 
-        Storage::put($filepath, $pdf->output());
+    /**
+     * Get HTML template for Attestation de Scolarité - matching official format
+     */
+    private function getAttestationScolaireTemplate(array $data)
+    {
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            margin: 2cm 2cm 2cm 2cm;
+        }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 1.4;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        .header-container {
+            display: table;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+        .header-left {
+            display: table-cell;
+            width: 35%;
+            vertical-align: top;
+            font-size: 9pt;
+            line-height: 1.3;
+        }
+        .header-center {
+            display: table-cell;
+            width: 30%;
+            text-align: center;
+            vertical-align: top;
+        }
+        .header-right {
+            display: table-cell;
+            width: 35%;
+            text-align: right;
+            vertical-align: top;
+            font-size: 9pt;
+            line-height: 1.3;
+            direction: rtl;
+        }
+        .logo-placeholder {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto;
+            border: 1px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8pt;
+            color: #999;
+        }
+        .title {
+            text-align: center;
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 50px 0 40px 0;
+            text-decoration: underline;
+            letter-spacing: 2px;
+        }
+        .content {
+            margin: 30px 0;
+            text-align: justify;
+        }
+        .content p {
+            margin: 15px 0;
+        }
+        .info-line {
+            margin: 8px 0;
+            line-height: 1.8;
+        }
+        .label {
+            display: inline-block;
+            width: 200px;
+            font-weight: normal;
+        }
+        .underline {
+            text-decoration: underline;
+        }
+        .signature-section {
+            margin-top: 80px;
+            text-align: right;
+        }
+        .signature-text {
+            margin-bottom: 10px;
+        }
+        .signature-placeholder {
+            width: 150px;
+            height: 80px;
+            border: 1px dashed #ccc;
+            margin: 10px 0 10px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8pt;
+            color: #999;
+        }
+        .footer-section {
+            margin-top: 60px;
+            font-size: 10pt;
+        }
+        .footer-info {
+            display: table;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .footer-left {
+            display: table-cell;
+            width: 50%;
+            font-size: 9pt;
+        }
+        .footer-right {
+            display: table-cell;
+            width: 50%;
+            text-align: right;
+            font-size: 9pt;
+            direction: rtl;
+        }
+        .footer-note {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 9pt;
+            font-style: italic;
+        }
+        .student-number {
+            position: absolute;
+            right: 2cm;
+            bottom: 3cm;
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-container">
+        <div class="header-left">
+            <strong>ROYAUME DU MAROC</strong><br>
+            Université Abdelmalek Essaâdi<br>
+            Ecole Nationale des Sciences<br>
+            Appliquées de<br>
+            Tétouan<br>
+            <u>Service des Affaires Estudiantines</u>
+        </div>
+        <div class="header-center">
+            <div class="logo-placeholder">
+                LOGO
+            </div>
+        </div>
+        <div class="header-right">
+            <strong>المملكة المغربية</strong><br>
+            جامعة عبد المالك السعدي<br>
+            المدرسة الوطنية للعلوم التطبيقية<br>
+            بتطوان<br>
+            <u>مصلحة الشؤون الطلابية</u>
+        </div>
+    </div>
 
-        return $filepath;
+    <div class="title">ATTESTATION DE SCOLARITE</div>
+
+    <div class="content">
+        <p>Le Directeur de l'Ecole Nationale des Sciences Appliquées de Tétouan atteste que l'étudiant :</p>
+        
+        <div style="margin: 30px 0;">
+            <div class="info-line">
+                <span class="label">Monsieur</span> <strong class="underline">{$data['nom']} {$data['prenom']}</strong>
+            </div>
+            
+            <div class="info-line">
+                <span class="label">Numéro de la carte d'identité nationale :</span> <span class="underline">{$data['cin']}</span>
+            </div>
+            
+            <div class="info-line">
+                <span class="label">Code national de l'étudiant :</span> <span class="underline">{$data['apogee']}</span>
+            </div>
+            
+            <div class="info-line">
+                né le <span class="underline">{$data['date_naissance']}</span> à <span class="underline">{$data['lieu_naissance']}</span>
+            </div>
+        </div>
+
+        <p>Poursuit ses études à l'Ecole Nationale des Sciences Appliquées Tétouan pour l'année universitaire <strong>{$data['annee_universitaire']}</strong></p>
+
+        <div style="margin: 30px 0;">
+            <div class="info-line">
+                <span class="label"><u>Diplôme</u></span> {$data['diplome']}
+            </div>
+            
+            <div class="info-line">
+                <span class="label"><u>Filière</u></span> {$data['filiere']}
+            </div>
+            
+            <div class="info-line">
+                <span class="label"><u>Année</u></span> {$data['annee']}
+            </div>
+        </div>
+    </div>
+
+    <div class="signature-section">
+        <div class="signature-text">
+            Fait à TETOUAN, le {$data['date_emission']}
+        </div>
+        <div class="signature-text">
+            Le Directeur
+        </div>
+        <div class="signature-placeholder">
+            Signature + Cachet
+        </div>
+    </div>
+
+    <div class="footer-section">
+        <div class="footer-info">
+            <div class="footer-left">
+                <strong>Adresse</strong> {$data['adresse']}<br>
+                {$data['bp']}<br>
+                Tél: {$data['tel']} FAX : {$data['fax']}
+            </div>
+            <div class="footer-right">
+                <strong>العنوان</strong> {$data['adresse']}<br>
+                ص ب {$data['bp']}<br>
+                {$data['fax']} :فاكس {$data['tel']} :هاتف
+            </div>
+        </div>
+        
+        <div class="footer-note">
+            Le présent document n'est délivré qu'en un seul exemplaire.<br>
+            Il appartient à l'étudiant d'en faire des photocopies certifiées conformes.
+        </div>
+    </div>
+
+    <div class="student-number">
+        <strong>N°étudiant</strong> {$data['num_etudiant']}
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Get HTML template for Attestation de Réussite
+     */
+    private function getAttestationReussiteTemplate(array $data)
+    {
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 20px;
+        }
+        .title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 40px 0;
+            text-decoration: underline;
+        }
+        .content {
+            margin: 30px 0;
+        }
+        .info {
+            margin: 20px 0;
+            line-height: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>École Nationale des Sciences Appliquées de Tétouan</h1>
+    </div>
+
+    <div class="title">ATTESTATION DE RÉUSSITE</div>
+
+    <div class="content">
+        <p>Le Directeur de l'École Nationale des Sciences Appliquées de Tétouan atteste que :</p>
+        
+        <div class="info">
+            <strong>Nom et Prénom :</strong> {$data['studentName']}<br>
+            <strong>CIN :</strong> {$data['cinNumber']}<br>
+            <strong>Code Apogée :</strong> {$data['apogeeNumber']}<br>
+            <strong>Filière :</strong> {$data['filiere']}<br>
+            <strong>Année universitaire :</strong> {$data['academicYear']}<br>
+            <strong>Décision :</strong> {$data['decision']}<br>
+            <strong>Mention :</strong> {$data['mention']}<br>
+            <strong>Moyenne :</strong> {$data['moyenne']}<br>
+        </div>
+
+        <p>La présente attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.</p>
+    </div>
+
+    <div class="footer">
+        <p>Fait à Tétouan, le {$data['dateIssued']}</p>
+        <p><strong>Le Directeur</strong></p>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Generate PDF from HTML using DomPDF
+     */
+    private function generatePDFFromHTML($html, $path)
+    {
+        // Check if DomPDF is available
+        if (class_exists('\Dompdf\Dompdf')) {
+            $options = new \Dompdf\Options();
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('isRemoteEnabled', true);
+            $options->set('defaultFont', 'Times New Roman');
+            
+            $dompdf = new \Dompdf\Dompdf($options);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            file_put_contents($path, $dompdf->output());
+        } else {
+            // Fallback: Create a simple text file
+            $textContent = strip_tags($html);
+            file_put_contents($path, $textContent);
+        }
     }
 }
