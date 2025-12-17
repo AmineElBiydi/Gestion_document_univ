@@ -10,16 +10,19 @@ use App\Mail\ReclamationReponse;
 use App\Mail\DemandeValidee;
 use Illuminate\Support\Facades\Mail;
 use App\Services\EmailService;
+use App\Services\PDFService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
     protected $emailService;
+    protected $pdfService;
 
-    public function __construct(EmailService $emailService)
+    public function __construct(EmailService $emailService, PDFService $pdfService)
     {
         $this->emailService = $emailService;
+        $this->pdfService = $pdfService;
     }
     /**
      * Authentification de l'administrateur
@@ -281,27 +284,107 @@ class AdminController extends Controller
      */
     public function validerDemande(Request $request, $id)
     {
-        $demande = Demande::findOrFail($id);
+        $demande = Demande::with([
+            'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee',
+            'releveNotes.decisionAnnee',
+            'conventionStage'
+        ])->findOrFail($id);
 
+        // Update demande status
         $demande->update([
             'status' => 'validee',
             'date_traitement' => now(),
             'traite_par_admin_id' => auth()->id(),
         ]);
 
-        // Send email notification to student
+        // Generate PDF
+        $pdfPath = null;
+        try {
+            $pdfPath = $this->pdfService->generatePDF($demande);
+            $demande->update(['fichier_genere_path' => $pdfPath]);
+            
+            // Update attestation_scolaires table with generation timestamp
+            if ($demande->type_document === 'attestation_scolaire' && $demande->attestationScolaire) {
+                $demande->attestationScolaire->update([
+                    'updated_at' => now()
+                ]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('PDF generation failed: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            // Still send email even if PDF generation fails
+        }
+
+        // Send email notification to student with PDF attachment
         $etudiant = $demande->etudiant;
         $typeDocument = $demande->getTypeDocumentLabel();
         
-        Mail::to($etudiant->email)->send(
-            new DemandeValidee($demande, $etudiant, $typeDocument)
-        );
+        try {
+            Mail::to($etudiant->email)->send(
+                new DemandeValidee($demande, $etudiant, $typeDocument, $pdfPath)
+            );
+        } catch (\Exception $e) {
+            \Log::error('Email sending failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Demande validée avec succès.',
-            'data' => $demande->load('etudiant')
+            'data' => $demande->load('etudiant'),
+            'pdf_path' => $pdfPath
         ]);
+    }
+
+    /**
+     * Preview PDF before validation
+     */
+    public function previewPDF($id)
+    {
+        $demande = Demande::with([
+            'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee',
+            'releveNotes.decisionAnnee',
+            'conventionStage'
+        ])->findOrFail($id);
+        
+        if ($demande->status !== 'en_attente') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seules les demandes en attente peuvent être prévisualisées.'
+            ], 400);
+        }
+
+        try {
+            $pdfPath = $this->pdfService->generatePDF($demande);
+            
+            // Convert absolute path to relative URL
+            $relativePath = str_replace(storage_path('app/public/'), '', $pdfPath);
+            $pdfUrl = url('storage/' . $relativePath);
+            
+            return response()->json([
+                'success' => true,
+                'pdf_url' => $pdfUrl,
+                'pdf_path' => $pdfPath
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('PDF preview generation failed: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la génération du PDF: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -327,13 +410,16 @@ class AdminController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Demande refusée.',
+            'message' => 'Demande refusée avec succès.',
             'data' => $demande->load('etudiant')
         ]);
     }
 
     /**
      * Obtenir les détails d'une demande
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function getDemandeDetails($id)
     {

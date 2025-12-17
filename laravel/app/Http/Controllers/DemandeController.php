@@ -122,9 +122,19 @@ class DemandeController extends Controller
             // Générer un numéro de demande unique
             $numDemande = 'DEM-' . strtoupper(Str::random(8)) . '-' . date('Ymd');
 
-            // Optionally get inscription_id if provided
+            // Get inscription_id - either from request or find the most recent one
             $inscriptionId = $request->input('inscription_id', null);
-            if ($inscriptionId) {
+            
+            if (!$inscriptionId) {
+                // Automatically find the student's most recent inscription
+                $inscription = Inscription::where('etudiant_id', $etudiant->id)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                
+                if ($inscription) {
+                    $inscriptionId = $inscription->id;
+                }
+            } else {
                 // Verify the inscription belongs to this student
                 $inscription = Inscription::where('id', $inscriptionId)
                     ->where('etudiant_id', $etudiant->id)
