@@ -2,67 +2,62 @@
 
 namespace App\Mail;
 
-use App\Models\Demande;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Queue\SerializesModels;
+use App\Models\Demande;
+use App\Models\Etudiant;
 
 class DemandeValidee extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $demande;
+    public $etudiant;
+    public $typeDocument;
     public $pdfPath;
 
-    public function __construct(Demande $demande, $pdfPath = null)
+    public function __construct(Demande $demande, Etudiant $etudiant, string $typeDocument, string $pdfPath = null)
     {
         $this->demande = $demande;
+        $this->etudiant = $etudiant;
+        $this->typeDocument = $typeDocument;
         $this->pdfPath = $pdfPath;
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Votre demande a été validée - ' . $this->demande->num_demande,
+            subject: 'Votre demande de ' . $this->typeDocument . ' a été validée',
         );
     }
 
     public function content(): Content
     {
         return new Content(
-            html: 'emails.demande-validee',
+            view: 'emails.demande-validee',
+            with: [
+                'demande' => $this->demande,
+                'etudiant' => $this->etudiant,
+                'typeDocument' => $this->typeDocument,
+            ]
         );
     }
 
     public function attachments(): array
     {
-        if ($this->pdfPath) {
-            // Déterminer le nom du fichier selon le type
-            $filename = 'document.pdf';
-            switch ($this->demande->type_document) {
-                case 'releve_notes':
-                    $filename = 'Releve_Notes.pdf';
-                    break;
-                case 'attestation_scolaire':
-                    $filename = 'Attestation_Scolarite.pdf';
-                    break;
-                case 'attestation_reussite':
-                    $filename = 'Attestation_Reussite.pdf';
-                    break;
-                case 'convention_stage':
-                    $filename = 'Convention_Stage.pdf';
-                    break;
-            }
-            
-            return [
-                Attachment::fromStorage($this->pdfPath)
-                    ->as($filename)
-                    ->withMime('application/pdf'),
-            ];
+        $attachments = [];
+        
+        if ($this->pdfPath && file_exists($this->pdfPath)) {
+            $filename = $this->typeDocument . '_' . $this->demande->num_demande . '.pdf';
+            $attachments[] = Attachment::fromPath($this->pdfPath)
+                ->as($filename)
+                ->withMime('application/pdf');
         }
-        return [];
+        
+        return $attachments;
     }
 }

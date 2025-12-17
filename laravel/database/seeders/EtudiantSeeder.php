@@ -251,6 +251,18 @@ class EtudiantSeeder extends Seeder
                 'adresse' => '63 Avenue Annakhil, Rabat',
                 'status' => 'actif',
             ],
+            [
+            'nom' => 'Alamii',
+            'prenom' => 'Mohammmed',
+            'apogee' => '123456789',
+            'cin' => 'AB1234567',
+            'email' => 'oumhella.abdellatif@etu.uae.ac.ma',
+            'date_naissance' => '2003-05-15',
+            'lieu_naissance' => 'Casablanca',
+            'telephone' => '+212 6 11 22 33 01',
+            'adresse' => '25 Rue des Écoles, Casablanca',
+            'status' => 'actif',
+        ],
         ];
 
         foreach ($etudiants as $etudiant) {

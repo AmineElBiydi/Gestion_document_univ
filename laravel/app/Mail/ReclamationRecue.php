@@ -2,12 +2,12 @@
 
 namespace App\Mail;
 
-use App\Models\Reclamation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use App\Models\Reclamation;
 
 class ReclamationRecue extends Mailable
 {
@@ -23,14 +23,19 @@ class ReclamationRecue extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Confirmation de votre réclamation',
+            subject: 'Confirmation de réception de votre réclamation',
         );
     }
 
     public function content(): Content
     {
         return new Content(
-            html: 'emails.reclamation-recue',
+            view: 'emails.reclamation-recue',
+            with: [
+                'reclamation' => $this->reclamation,
+                'etudiant' => $this->reclamation->etudiant,
+                'demande' => $this->reclamation->demande,
+            ]
         );
     }
 

@@ -73,6 +73,9 @@ export default function AdminDemandes() {
   const [selectedRequest, setSelectedRequest] = useState<DocumentRequest | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showRefuseDialog, setShowRefuseDialog] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [refusalReason, setRefusalReason] = useState("");
   const [customReason, setCustomReason] = useState("");
 
@@ -157,6 +160,26 @@ export default function AdminDemandes() {
     return matchesSearch && matchesType;
   });
 
+  const handlePreviewPDF = async (request: DocumentRequest) => {
+    setSelectedRequest(request);
+    setIsLoadingPdf(true);
+    setShowPreviewDialog(true);
+    
+    try {
+      const response = await apiEndpoints.previewPDF(request.id);
+      
+      if (response.data.success) {
+        setPdfUrl(response.data.pdf_url);
+      }
+    } catch (error: any) {
+      toast.error("Erreur lors de la prévisualisation du PDF");
+      console.error("Preview PDF error:", error);
+      setShowPreviewDialog(false);
+    } finally {
+      setIsLoadingPdf(false);
+    }
+  };
+
   const handleValidate = async (request: DocumentRequest) => {
     try {
       const response = await apiEndpoints.validerDemande(request.id);
@@ -168,10 +191,21 @@ export default function AdminDemandes() {
           )
         );
         toast.success(`Demande ${request.requestNumber} validée`);
+        // Reload the list to remove validated request from pending list
+        loadDemandes();
       }
     } catch (error: any) {
       toast.error("Erreur lors de la validation");
     }
+  };
+
+  const handleValidateFromPreview = async () => {
+    if (!selectedRequest) return;
+    
+    setShowPreviewDialog(false);
+    await handleValidate(selectedRequest);
+    setSelectedRequest(null);
+    setPdfUrl(null);
   };
 
   const handleRefuse = async () => {
@@ -301,6 +335,14 @@ export default function AdminDemandes() {
                             <Eye className="mr-2 h-4 w-4" />
                             Voir détails
                           </DropdownMenuItem>
+                          {(request.status === "en_attente" || request.status === "en_cours") && (
+                            <DropdownMenuItem
+                              onClick={() => handlePreviewPDF(request)}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Prévisualiser PDF
+                            </DropdownMenuItem>
+                          )}
                           {(request.status === "en_attente" || request.status === "en_cours") && (
                             <>
                               <DropdownMenuSeparator />
@@ -450,6 +492,64 @@ export default function AdminDemandes() {
             </Button>
             <Button variant="destructive" onClick={handleRefuse}>
               Confirmer le refus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview PDF Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={(open) => {
+        setShowPreviewDialog(open);
+        if (!open) {
+          setPdfUrl(null);
+          setSelectedRequest(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Prévisualisation du PDF</DialogTitle>
+            <DialogDescription>
+              {selectedRequest?.requestNumber} - {selectedRequest && documentTypeLabels[selectedRequest.documentType]}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {isLoadingPdf ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Génération du PDF...</p>
+                </div>
+              </div>
+            ) : pdfUrl ? (
+              <iframe
+                src={pdfUrl}
+                className="w-full h-full border rounded"
+                title="PDF Preview"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">Impossible de charger le PDF</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowPreviewDialog(false);
+                setPdfUrl(null);
+                setSelectedRequest(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleValidateFromPreview}
+              disabled={isLoadingPdf}
+              className="bg-success hover:bg-success/90"
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Valider et Envoyer
             </Button>
           </DialogFooter>
         </DialogContent>

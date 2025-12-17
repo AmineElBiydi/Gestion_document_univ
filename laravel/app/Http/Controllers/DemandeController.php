@@ -157,29 +157,19 @@ class DemandeController extends Controller
             // Générer un numéro de demande unique
             $numDemande = 'DEM-' . strtoupper(Str::random(8)) . '-' . date('Ymd');
 
-            // Optionally get inscription_id if provided
+            // Get inscription_id - either from request or find the most recent one
             $inscriptionId = $request->input('inscription_id', null);
-
-            // Logic to find inscription based on year if not provided
-            if (!$inscriptionId && $request->has('annee_universitaire')) {
-                $anneeLibelle = $request->input('annee_universitaire');
+            
+            if (!$inscriptionId) {
+                // Automatically find the student's most recent inscription
+                $inscription = Inscription::where('etudiant_id', $etudiant->id)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
                 
-                // Find the academic year
-                $annee = \App\Models\AnneeUniversitaire::where('libelle', $anneeLibelle)->first();
-                
-                if ($annee) {
-                    // Find the inscription for this student and this year
-                    $inscription = Inscription::where('etudiant_id', $etudiant->id)
-                        ->where('annee_id', $annee->id)
-                        ->first();
-                        
-                    if ($inscription) {
-                        $inscriptionId = $inscription->id;
-                    }
+                if ($inscription) {
+                    $inscriptionId = $inscription->id;
                 }
-            }
-
-            if ($inscriptionId) {
+            } else {
                 // Verify the inscription belongs to this student
                 $inscription = Inscription::where('id', $inscriptionId)
                     ->where('etudiant_id', $etudiant->id)

@@ -2,12 +2,12 @@
 
 namespace App\Mail;
 
-use App\Models\Demande;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use App\Models\Demande;
 
 class DemandeRefusee extends Mailable
 {
@@ -30,7 +30,13 @@ class DemandeRefusee extends Mailable
     public function content(): Content
     {
         return new Content(
-            html: 'emails.demande-refusee',
+            view: 'emails.demande-refusee',
+            with: [
+                'demande' => $this->demande,
+                'etudiant' => $this->demande->etudiant,
+                'typeDocument' => $this->demande->getTypeDocumentLabel(),
+                'raisonRefus' => $this->demande->raison_refus,
+            ]
         );
     }
 

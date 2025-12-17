@@ -69,6 +69,7 @@ export const apiEndpoints = {
   // Legacy routes (keep for backward compatibility)
   getDemandes: (params?: any) => api.get('/admin/demandes', { params }),
   getDemandeDetails: (id: string) => api.get(`/admin/demandes/${id}`),
+  previewPDF: (id: string) => api.get(`/admin/demandes/${id}/preview`),
   validerDemande: (id: string) => api.put(`/admin/demandes/${id}/valider`),
   refuserDemande: (id: string, data: { raison: string }) => 
     api.put(`/admin/demandes/${id}/refuser`, data),
