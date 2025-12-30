@@ -31,10 +31,8 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             EtudiantSeeder::class,
             InscriptionSeeder::class,
+            NoteSeeder::class,
 
-                // Additional data
-            DemandeSeeder::class,
-            ReclamationSeeder::class,
         ]);
     }
 }
