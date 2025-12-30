@@ -59,6 +59,11 @@ export function Header() {
                   Réclamations
                 </Button>
               </Link>
+              <Link to="/admin/claims-dashboard">
+                <Button variant="ghost" className={cn(location.pathname === "/admin/claims-dashboard" && "bg-accent")}>
+                  Stats
+                </Button>
+              </Link>
             </>
           )}
         </nav>

@@ -12,6 +12,7 @@ use App\Services\PdfService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Mail\DemandeValidee;
+use App\Models\DemandeHistorique;
 
 class AdminController extends Controller
 {
@@ -323,6 +324,14 @@ class AdminController extends Controller
                 // Still send email even if PDF generation fails
             }
 
+            // Historique
+            DemandeHistorique::create([
+                'demande_id' => $demande->id,
+                'user_id' => auth()->id(),
+                'action' => 'validee',
+                'details' => 'Demande validée par l\'administrateur.',
+            ]);
+
             \DB::commit();
         } catch (\Exception $e) {
             \DB::rollBack();
@@ -417,6 +426,14 @@ class AdminController extends Controller
         $demande->traite_par_admin_id = auth()->id();
         $demande->save();
 
+        // Historique
+        DemandeHistorique::create([
+            'demande_id' => $demande->id,
+            'user_id' => auth()->id(),
+            'action' => 'rejetee',
+            'details' => 'Motif: ' . $request->raison,
+        ]);
+
         // Envoyer email de refus à l'étudiant
         try {
             $this->emailService->envoyerRefusDemande($demande);
@@ -457,6 +474,21 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'data' => $demande
+        ]);
+    }
+
+    /**
+     * Obtenir l'historique des actions sur une demande
+     */
+    public function getDemandeHistory($id)
+    {
+        $historique = DemandeHistorique::where('demande_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $historique
         ]);
     }
 
@@ -653,6 +685,14 @@ class AdminController extends Controller
             'raison_refus' => null, // Effacer la raison de refus
             'date_traitement' => now(),
             'traite_par_admin_id' => auth()->id(),
+        ]);
+
+        // Historique
+        DemandeHistorique::create([
+            'demande_id' => $demande->id,
+            'user_id' => auth()->id(),
+            'action' => 'inversee',
+            'details' => 'Statut inversé de Rejetée à Validée.',
         ]);
 
         // Send email notification to student via EmailService

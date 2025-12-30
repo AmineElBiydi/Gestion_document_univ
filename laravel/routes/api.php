@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/demandes', [AdminController::class, 'getDemandes']);
     Route::get('/admin/demandes/{id}', [AdminController::class, 'getDemandeDetails']);
     Route::get('/admin/demandes/{id}/preview', [AdminController::class, 'previewPDF']);
+    Route::get('/admin/demandes/{id}/history', [AdminController::class, 'getDemandeHistory']);
     Route::put('/admin/demandes/{id}/valider', [AdminController::class, 'validerDemande']);
     Route::put('/admin/demandes/{id}/refuser', [AdminController::class, 'refuserDemande']);
     
