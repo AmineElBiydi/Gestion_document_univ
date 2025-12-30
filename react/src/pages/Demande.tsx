@@ -60,7 +60,7 @@ export default function Demande() {
   // Document/Action data
   const [selectedAction, setSelectedAction] = useState<FormAction | "">("");
   const [details, setDetails] = useState<Record<string, string>>({});
-  const [studentAnneesUniversitaires, setStudentAnneesUniversitaires] = useState<string[]>([]);
+  const [studentAnneesUniversitaires, setStudentAnneesUniversitaires] = useState<{ id: number, libelle: string }[]>([]);
 
   // Reclamation data
   const [requestNumber, setRequestNumber] = useState("");
@@ -238,6 +238,7 @@ export default function Demande() {
           apogee,
           cin,
           type_document: selectedAction,
+          inscription_id: studentAnneesUniversitaires.find(a => a.libelle === details.annee)?.id
         };
 
         // Add document-specific details
@@ -431,9 +432,11 @@ export default function Demande() {
                 <SelectValue placeholder="Sélectionnez l'année" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="2024-2025">2024-2025</SelectItem>
-                <SelectItem value="2023-2024">2023-2024</SelectItem>
-                <SelectItem value="2022-2023">2022-2023</SelectItem>
+                {studentAnneesUniversitaires.map((item) => (
+                  <SelectItem key={item.id} value={item.libelle}>
+                    {item.libelle}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -476,9 +479,11 @@ export default function Demande() {
                 <SelectValue placeholder="Sélectionnez l'année" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="2023-2024">2023-2024</SelectItem>
-                <SelectItem value="2022-2023">2022-2023</SelectItem>
-                <SelectItem value="2021-2022">2021-2022</SelectItem>
+                {studentAnneesUniversitaires.map((item) => (
+                  <SelectItem key={item.id} value={item.libelle}>
+                    {item.libelle}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -501,9 +506,11 @@ export default function Demande() {
                 <SelectValue placeholder="Sélectionnez l'année" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="2024-2025">2024-2025</SelectItem>
-                <SelectItem value="2023-2024">2023-2024</SelectItem>
-                <SelectItem value="2022-2023">2022-2023</SelectItem>
+                {studentAnneesUniversitaires.map((item) => (
+                  <SelectItem key={item.id} value={item.libelle}>
+                    {item.libelle}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

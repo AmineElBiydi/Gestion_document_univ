@@ -105,9 +105,12 @@ class DemandeController extends Controller
                 $anneesUniversitaires = $student->inscriptions()
                     ->with('anneeUniversitaire')
                     ->get()
-                    ->pluck('anneeUniversitaire.libelle')
-                    ->filter()
-                    ->unique()
+                    ->map(function ($inscription) {
+                        return [
+                            'id' => $inscription->id,
+                            'libelle' => $inscription->anneeUniversitaire->libelle ?? 'Année inconnue'
+                        ];
+                    })
                     ->values()
                     ->toArray();
             }
