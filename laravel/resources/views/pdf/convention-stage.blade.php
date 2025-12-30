@@ -117,7 +117,7 @@
             <div style="text-decoration: underline;">Tétouan</div>
         </div>
         <div class="header-center">
-            <img src="https://www.9rayti.com/img/etablissement/universite-abdelmalek-essaadi-tetouan_5e4c0f3a2b155.jpg" alt="Logo" class="logo" />
+            <img src="https://www.ensamaroc.com/school/7" alt="Logo" class="logo" />
         </div>
         <div class="header-right">
             <div>{{ $univ_ar }}</div>

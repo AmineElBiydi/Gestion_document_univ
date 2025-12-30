@@ -35,9 +35,12 @@ class EmailService
         try {
             $pdfPath = null;
             
-            // Generate PDF for convention de stage
+            // Generate PDF for specific documents
             if ($demande->type_document === 'convention_stage') {
                 $pdfGenerator = new ConventionStagePDF();
+                $pdfPath = $pdfGenerator->generate($demande);
+            } elseif ($demande->type_document === 'attestation_reussite') {
+                $pdfGenerator = new AttestationReussitePDF();
                 $pdfPath = $pdfGenerator->generate($demande);
             }
             
