@@ -8,16 +8,31 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Reclamation;
+use App\Models\Etudiant;
 
 class ReclamationReponse extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $reclamation;
+    public $etudiant;
+    public $typeReclamation;
+    public $reponse;
+    public $adminNom;
 
-    public function __construct(Reclamation $reclamation)
+    public function __construct(
+        Reclamation $reclamation, 
+        Etudiant $etudiant, 
+        string $typeReclamation, 
+        string $reponse,
+        string $adminNom
+    )
     {
         $this->reclamation = $reclamation;
+        $this->etudiant = $etudiant;
+        $this->typeReclamation = $typeReclamation;
+        $this->reponse = $reponse;
+        $this->adminNom = $adminNom;
     }
 
     public function envelope(): Envelope
@@ -33,9 +48,10 @@ class ReclamationReponse extends Mailable
             view: 'emails.reclamation-reponse',
             with: [
                 'reclamation' => $this->reclamation,
-                'etudiant' => $this->reclamation->etudiant,
-                'demande' => $this->reclamation->demande,
-                'reponse' => $this->reclamation->reponse,
+                'etudiant' => $this->etudiant,
+                'typeReclamation' => $this->typeReclamation,
+                'reponse' => $this->reponse,
+                'adminNom' => $this->adminNom,
             ]
         );
     }

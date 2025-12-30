@@ -7,77 +7,86 @@
             font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        .container {
             max-width: 600px;
-            margin: 20px auto;
-            background: #ffffff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 0 auto;
+            padding: 20px;
         }
         .header {
-            background-color: #4F46E5;
+            background-color: #f59e0b;
             color: white;
             padding: 20px;
             text-align: center;
+            border-radius: 5px 5px 0 0;
         }
         .content {
+            background-color: #f9fafb;
             padding: 30px;
+            border: 1px solid #e5e7eb;
         }
         .info-box {
-            background-color: #f3f4f6;
+            background-color: white;
             padding: 15px;
-            border-radius: 6px;
-            margin: 20px 0;
-            border-left: 4px solid #4F46E5;
+            margin: 15px 0;
+            border-left: 4px solid #f59e0b;
         }
         .response-box {
             background-color: #ecfdf5;
             padding: 15px;
-            border-radius: 6px;
-            margin: 20px 0;
+            margin: 15px 0;
             border-left: 4px solid #10b981;
         }
         .footer {
-            background-color: #f9fafb;
-            padding: 20px;
             text-align: center;
+            margin-top: 20px;
+            padding: 20px;
             font-size: 12px;
             color: #6b7280;
-            border-top: 1px solid #e5e7eb;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .label {
+            font-weight: bold;
+            color: #f59e0b;
+        }
+        .response-label {
+            font-weight: bold;
+            color: #059669;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1 style="margin: 0; font-size: 24px;">Réponse à votre réclamation</h1>
+    <div class="header">
+        <h1>Réponse à votre Réclamation</h1>
+    </div>
+    
+    <div class="content">
+        <p>Bonjour <strong>{{ $etudiant->prenom }} {{ $etudiant->nom }}</strong>,</p>
+        
+        <p>Votre réclamation concernant la demande <strong>{{ $reclamation->demande->num_demande ?? 'N/A' }}</strong> a été traitée par notre équipe administrative.</p>
+        
+        <div class="info-box">
+            <p><span class="label">Votre message :</span></p>
+            <p>{{ $reclamation->description }}</p>
+            <p><span class="label">Date de soumission :</span> {{ $reclamation->created_at->format('d/m/Y à H:i') }}</p>
         </div>
-        <div class="content">
-            <p>Bonjour <strong>{{ $etudiant->prenom }} {{ $etudiant->nom }}</strong>,</p>
-            
-            <p>Votre réclamation concernant la demande <strong>{{ $demande->num_demande }}</strong> a été traitée par notre service.</p>
-            
-            <div class="info-box">
-                <p style="margin: 5px 0;"><strong>Votre message :</strong></p>
-                <p style="margin: 5px 0; font-style: italic;">"{{ $reclamation->message }}"</p>
-            </div>
-
-            <div class="response-box">
-                <p style="margin: 5px 0;"><strong>Réponse de l'administration :</strong></p>
-                <p style="margin: 5px 0;">{{ $reponse }}</p>
-            </div>
-            
-            <p>Si vous avez d'autres questions, n'hésitez pas à nous contacter.</p>
+        
+        <div class="response-box">
+            <p><span class="response-label">Réponse de l'administration ({{ $adminNom }}) :</span></p>
+            <p>{{ $reponse }}</p>
         </div>
-        <div class="footer">
-            <p>Ceci est un email automatique, merci de ne pas y répondre.</p>
-            <p>&copy; {{ date('Y') }} Université Abdelmalek Essaâdi - ENSA Tétouan</p>
-        </div>
+        
+        <p>Si vous avez d'autres questions, n'hésitez pas à nous contacter.</p>
+        
+        <p>Cordialement,<br>
+        <strong>Le Service de Scolarité</strong><br>
+        École Nationale des Sciences Appliquées de Tétouan</p>
+    </div>
+    
+    <div class="footer">
+        <p>Ceci est un email automatique, merci de ne pas y répondre.</p>
+        <p>Pour toute question, veuillez contacter le service de scolarité.</p>
     </div>
 </body>
 </html>
