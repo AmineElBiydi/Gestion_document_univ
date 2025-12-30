@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { Link, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { ReclamationsSkeleton } from "@/components/shared/Skeleton";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import {
 import { apiEndpoints } from "@/lib/api";
 
 export default function AdminReclamations() {
+  const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAdminAuth();
   const [reclamations, setReclamations] = useState<Reclamation[]>([]);
   const [isLoadingReclamations, setIsLoadingReclamations] = useState(false);
@@ -76,7 +78,8 @@ export default function AdminReclamations() {
         // Transform API data to frontend format
         const transformedReclamations = reclamationsData.map((reclamation: any) => ({
           id: reclamation.id.toString(),
-          requestId: `DMD-${new Date(reclamation.created_at).getFullYear()}-${String(reclamation.demande_id || reclamation.id).padStart(4, '0')}`,
+          requestId: reclamation.demande?.num_demande || `DMD-${new Date(reclamation.created_at).getFullYear()}-${String(reclamation.demande_id || reclamation.id).padStart(4, '0')}`,
+          demandStatus: reclamation.demande?.status,
           studentId: reclamation.etudiant_id?.toString() || '',
           studentName: `${reclamation.etudiant?.nom || ''} ${reclamation.etudiant?.prenom || ''}`.trim(),
           studentApogee: reclamation.etudiant?.apogee || '',
@@ -281,6 +284,19 @@ export default function AdminReclamations() {
                         <Eye className="h-4 w-4 mr-1" />
                         Voir
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const targetPage = (reclamation.demandStatus === 'validee' || reclamation.demandStatus === 'rejetee') 
+                              ? '/admin/historique' 
+                              : '/admin/demandes';
+                          navigate(`${targetPage}?search=${reclamation.requestId}`);
+                        }}
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        Demande
+                      </Button>
                       {reclamation.status !== "traitee" && (
                         <Button
                           variant="outline"
@@ -309,7 +325,19 @@ export default function AdminReclamations() {
           <DialogHeader>
             <DialogTitle>Détails de la réclamation</DialogTitle>
             <DialogDescription>
-              Demande concernée: {selectedReclamation?.requestId}
+              Demande concernée: 
+              <button 
+                className="text-primary hover:underline ml-1 font-medium"
+                onClick={() => {
+                  setShowViewDialog(false);
+                  const targetPage = (selectedReclamation?.demandStatus === 'validee' || selectedReclamation?.demandStatus === 'rejetee') 
+                      ? '/admin/historique' 
+                      : '/admin/demandes';
+                  navigate(`${targetPage}?search=${selectedReclamation?.requestId}`);
+                }}
+              >
+                {selectedReclamation?.requestId}
+              </button>
             </DialogDescription>
           </DialogHeader>
           {selectedReclamation && (

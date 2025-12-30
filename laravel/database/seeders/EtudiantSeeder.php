@@ -99,7 +99,7 @@ class EtudiantSeeder extends Seeder
                 'prenom' => 'Leila',
                 'apogee' => '45678901',
                 'cin' => 'OP456789',
-                'email' => 'leila.cherkaoui@ensa.ac.ma',
+                'email' => 'zelallouche@gmail.com',
                 'date_naissance' => '2003-06-12',
                 'lieu_naissance' => 'Agadir',
                 'telephone' => '+212 6 11 22 33 08',

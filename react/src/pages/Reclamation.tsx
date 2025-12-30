@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ReclamationType, reclamationTypeLabels } from "@/types";
+import { apiEndpoints } from "@/lib/api";
 import {
   MessageSquare,
   Send,
@@ -57,12 +58,28 @@ export default function Reclamation() {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsLoading(false);
 
-    toast.success("Réclamation envoyée avec succès !");
-    navigate("/suivi");
+    try {
+      const formData = new FormData();
+      formData.append("num_demande", requestNumber);
+      formData.append("type", reclamationType);
+      formData.append("description", description);
+      if (attachment) {
+        formData.append("piece_jointe", attachment);
+      }
+
+      const response = await apiEndpoints.createReclamation(formData);
+
+      if (response.data.success) {
+        toast.success("Réclamation envoyée avec succès !");
+        navigate("/suivi");
+      }
+    } catch (error: any) {
+      console.error("Reclamation error:", error);
+      toast.error(error.response?.data?.message || "Une erreur est survenue lors de l'envoi");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -91,7 +108,7 @@ export default function Reclamation() {
                 <div className="text-sm">
                   <p className="font-medium text-info">Information</p>
                   <p className="text-muted-foreground">
-                    Votre réclamation sera traitée dans les meilleurs délais. 
+                    Votre réclamation sera traitée dans les meilleurs délais.
                     Vous recevrez un email de confirmation.
                   </p>
                 </div>
