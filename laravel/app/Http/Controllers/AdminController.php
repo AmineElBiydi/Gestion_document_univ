@@ -8,16 +8,17 @@ use App\Models\Reclamation;
 use App\Models\Etudiant;
 use Illuminate\Support\Facades\Mail;
 use App\Services\EmailService;
-use App\Services\PDFService;
+use App\Services\PdfService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Mail\DemandeValidee;
 
 class AdminController extends Controller
 {
     protected $emailService;
     protected $pdfService;
 
-    public function __construct(EmailService $emailService, PDFService $pdfService)
+    public function __construct(EmailService $emailService, PdfService $pdfService)
     {
         $this->emailService = $emailService;
         $this->pdfService = $pdfService;
@@ -282,61 +283,67 @@ class AdminController extends Controller
      */
     public function validerDemande(Request $request, $id)
     {
-        $demande = Demande::with([
-            'etudiant',
-            'inscription.filiere',
-            'inscription.niveau',
-            'inscription.anneeUniversitaire',
-            'attestationScolaire',
-            'attestationReussite.decisionAnnee',
-            'releveNotes.decisionAnnee',
-            'conventionStage'
-        ])->findOrFail($id);
-
-        // Update demande status
-        $demande->update([
-            'status' => 'validee',
-            'date_traitement' => now(),
-            'traite_par_admin_id' => auth()->id(),
-        ]);
-
-        // Generate PDF
-        $pdfPath = null;
         try {
-            $pdfPath = $this->pdfService->generatePDF($demande);
-            $demande->update(['fichier_genere_path' => $pdfPath]);
-            
-            // Update attestation_scolaires table with generation timestamp
-            if ($demande->type_document === 'attestation_scolaire' && $demande->attestationScolaire) {
-                $demande->attestationScolaire->update([
-                    'updated_at' => now()
-                ]);
+            $demande = Demande::with([
+                'etudiant',
+                'inscription.filiere',
+                'inscription.niveau',
+                'inscription.anneeUniversitaire',
+                'attestationScolaire',
+                'attestationReussite.decisionAnnee',
+                'releveNotes.decisionAnnee',
+                'conventionStage'
+            ])->findOrFail($id);
+
+            // Update demande status
+            $demande->update([
+                'status' => 'validee',
+                'date_traitement' => now(),
+                'traite_par_admin_id' => auth()->id(),
+            ]);
+
+            // Generate PDF
+            $pdfPath = null;
+            try {
+                $pdfPath = $this->pdfService->generatePDF($demande);
+                $demande->update(['fichier_genere_path' => $pdfPath]);
+                
+                // Update attestation_scolaires table with generation timestamp
+                if ($demande->type_document === 'attestation_scolaire' && $demande->attestationScolaire) {
+                    $demande->attestationScolaire->update([
+                        'updated_at' => now()
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                \Log::error('PDF generation failed: ' . $e->getMessage());
+                \Log::error('Stack trace: ' . $e->getTraceAsString());
             }
-        } catch (\Exception $e) {
-            \Log::error('PDF generation failed: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            // Send email notification to student with PDF attachment
+            $etudiant = $demande->etudiant;
+            $typeDocument = $demande->getTypeDocumentLabel();
             
-            // Still send email even if PDF generation fails
-        }
+            try {
+                Mail::to($etudiant->email)->send(
+                    new DemandeValidee($demande, $etudiant, $typeDocument, $pdfPath)
+                );
+            } catch (\Throwable $e) {
+                \Log::error('Email sending failed: ' . $e->getMessage());
+            }
 
-        // Send email notification to student with PDF attachment
-        $etudiant = $demande->etudiant;
-        $typeDocument = $demande->getTypeDocumentLabel();
-        
-        try {
-            Mail::to($etudiant->email)->send(
-                new DemandeValidee($demande, $etudiant, $typeDocument, $pdfPath)
-            );
-        } catch (\Exception $e) {
-            \Log::error('Email sending failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => true,
+                'message' => 'Demande validée avec succès.',
+                'data' => $demande->load('etudiant'),
+                'pdf_path' => $pdfPath
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('CRITICAL ERROR validerDemande: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur critique lors de la validation: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Demande validée avec succès.',
-            'data' => $demande->load('etudiant'),
-            'pdf_path' => $pdfPath
-        ]);
     }
 
     /**
@@ -509,9 +516,9 @@ class AdminController extends Controller
             'traite_par_admin_id' => auth()->id(),
         ]);
 
-        // Send email notification to student (disabled - Mail class not created)
-        // TODO: Create ReclamationReponse Mail class
-        \Log::info('Email reclamation reponse (disabled): ' . $reclamation->id);
+        // Send email notification to student
+        $this->emailService->envoyerReponseReclamation($reclamation);
+        \Log::info('Email reclamation reponse sent: ' . $reclamation->id);
 
         return response()->json([
             'success' => true,

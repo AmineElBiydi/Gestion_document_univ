@@ -5,8 +5,9 @@ namespace App\Services;
 use App\Models\Demande;
 use App\Models\Etudiant;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
-class PDFService
+class PdfService
 {
     /**
      * Generate PDF for a demande
@@ -140,16 +141,118 @@ class PDFService
      */
     private function generateReleveNotes(Demande $demande, Etudiant $etudiant)
     {
+        // Load specific relationships for transcript
+        $demande->load([
+            'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
+            'releveNotes.decisionAnnee.inscription.niveau',
+            'releveNotes.decisionAnnee.inscription.filiere',
+            'releveNotes.decisionAnnee.inscription.notes.moduleNiveau.module'
+        ]);
+
+        $releveNotes = $demande->releveNotes;
+        
+        if (!$releveNotes) {
+            // Create dummy if missing
+            $releveNotes = (object)['decisionAnnee' => null];
+        }
+
+        $decision = $releveNotes->decisionAnnee;
+        $inscription = null;
+
+        // Fallback si pas de décision liée
+        if (!$decision) {
+            // Tenter de récupérer l'inscription via la demande
+            $inscription = $demande->inscription;
+            
+            if (!$inscription) {
+                // Last resort: Get the latest inscription for this student
+                $latestInscription = \App\Models\Inscription::where('etudiant_id', $demande->etudiant_id)
+                    ->with(['anneeUniversitaire', 'niveau', 'filiere'])
+                    ->latest('created_at')
+                    ->first();
+
+                if ($latestInscription) {
+                    $inscription = $latestInscription;
+                } else {
+                    // Absolute fallback: Create a dummy inscription object
+                    $inscription = (object)[
+                        'anneeUniversitaire' => (object)['libelle' => 'N/A'],
+                        'niveau' => (object)['libelle' => 'N/A', 'code_niveau' => 'N/A'],
+                        'filiere' => (object)['nom_filiere' => 'N/A'],
+                        'niveau_id' => null,
+                        'filiere_id' => null,
+                        'notes' => collect([]),
+                        // Mock the relation for the view
+                        'getAttribute' => function($key) { return null; }
+                    ];
+                }
+            }
+
+            // Créer un objet décision factice
+            $decision = (object)[
+                'inscription' => $inscription,
+                'decision' => 'N/A',
+                'mention' => 'N/A',
+                'moyenne_annuelle' => 0.00,
+                'type_session' => 'normale',
+                'created_at' => now()
+            ];
+        } else {
+            $inscription = $decision->inscription;
+        }
+        
+        // Récupérer les notes
+        // Check if inscription is a real model or our dummy object
+        if ($inscription instanceof \App\Models\Inscription) {
+            $notes = $inscription->notes()
+                ->with('moduleNiveau.module')
+                ->get();
+        } else {
+            $notes = collect([]);
+        }
+
+        // Si aucune note n'est trouvée, générer des entrées N/A
+        if ($notes->isEmpty()) {
+            $niveauId = $inscription instanceof \App\Models\Inscription ? $inscription->niveau_id : null;
+            $filiereId = $inscription instanceof \App\Models\Inscription ? $inscription->filiere_id : null;
+            
+            if ($niveauId && $filiereId) {
+                $modulesNiveau = \App\Models\ModuleNiveau::where('niveau_id', $niveauId)
+                    ->where('filiere_id', $filiereId)
+                    ->with('module')
+                    ->get();
+                
+                if ($modulesNiveau->isNotEmpty()) {
+                    $notes = $modulesNiveau->map(function($mn) {
+                        return (object)[
+                            'moduleNiveau' => $mn,
+                            'note' => 'N/A',
+                            'est_valide' => null
+                        ];
+                    });
+                }
+            }
+        }
+
+        // Générer le PDF
+        $pdf = Pdf::loadView('pdf.releve_notes', [
+            'etudiant' => $etudiant,
+            'decision' => $decision,
+            'notes' => $notes,
+        ]);
+
+        // Nom du fichier
         $filename = 'releve_notes_' . $demande->num_demande . '.pdf';
         $path = storage_path('app/public/documents/' . $filename);
-        
+
+        // Ensure directory exists
         if (!file_exists(dirname($path))) {
             mkdir(dirname($path), 0755, true);
         }
-        
-        $html = '<h1>Relevé de Notes</h1><p>Document en cours de développement</p>';
-        $this->generatePDFFromHTML($html, $path);
-        
+
+        // Sauvegarder le PDF
+        file_put_contents($path, $pdf->output());
+
         return $path;
     }
 
