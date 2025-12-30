@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Services\ConventionStagePDF;
 use App\Services\AttestationReussitePDF;
 
-class PdfService
+class PDFService
 {
     /**
      * Generate PDF for a demande
