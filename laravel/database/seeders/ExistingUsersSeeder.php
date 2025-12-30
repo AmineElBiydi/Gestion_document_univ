@@ -37,16 +37,9 @@ class ExistingUsersSeeder extends Seeder
                 ->where('annee_id', $annee->id)
                 ->first();
 
-
             if (!$inscription) {
-                // Default to first filiere and CP1 level
-                $filiere = Filiere::first(); 
-                $niveau = Niveau::where('code_niveau', 'CP1')->first(); 
-
-                if (!$filiere || !$niveau) {
-                     $this->command->error("Missing base data (Filiere or Niveau). Run base seeders first.");
-                     continue;
-                }
+                $filiere = Filiere::first(); // Just pick first one (CP)
+                $niveau = Niveau::where('filiere_id', $filiere->id)->first(); // CP1
 
                 $inscription = Inscription::create([
                     'etudiant_id' => $etudiant->id,
@@ -62,11 +55,7 @@ class ExistingUsersSeeder extends Seeder
             }
 
             // 2. Generate Notes for this Inscription
-            // Modules are specific to (Niveau + Filiere)
-            $modulesNiveau = ModuleNiveau::where('niveau_id', $inscription->niveau_id)
-                ->where('filiere_id', $inscription->filiere_id)
-                ->get();
-
+            $modulesNiveau = ModuleNiveau::where('niveau_id', $inscription->niveau_id)->get();
 
             if ($modulesNiveau->isEmpty()) {
                 $this->command->warn(" - No modules found for this level! Skipping notes.");
@@ -120,6 +109,7 @@ class ExistingUsersSeeder extends Seeder
                      'moyenne_annuelle' => $avg,
                      'decision' => $avg >= 12 ? 'Admis' : 'Ajourné',
                      'mention' => $this->getMention($avg),
+                     'rang' => rand(1, 30),
                      'type_session' => 'Normale'
                  ]);
                  $this->command->info(" - Generated Decision: " . ($avg >= 12 ? 'Admis' : 'Ajourné'));

@@ -24,6 +24,7 @@ class PDFService
             'inscription.filiere',
             'inscription.niveau',
             'inscription.anneeUniversitaire',
+            'inscription.notes.moduleNiveau.module', // Load notes
             'attestationScolaire',
             'attestationReussite.decisionAnnee',
             'releveNotes.decisionAnnee',
@@ -131,6 +132,39 @@ class PDFService
      */
     private function generateReleveNotes(Demande $demande, Etudiant $etudiant)
     {
+        // Get details
+        $inscription = $demande->inscription;
+        $notes = $inscription ? $inscription->notes : collect([]);
+        $decision = $demande->releveNotes && $demande->releveNotes->decisionAnnee 
+            ? $demande->releveNotes->decisionAnnee 
+            : null;
+
+        $data = [
+            'nom' => strtoupper($etudiant->nom),
+            'prenom' => ucfirst(strtolower($etudiant->prenom)),
+            'cin' => $etudiant->cin,
+            'apogee' => $etudiant->apogee,
+            'date_naissance' => $etudiant->date_naissance ? $etudiant->date_naissance->format('d/m/Y') : '',
+            'lieu_naissance' => $etudiant->lieu_naissance ?? '',
+            'annee_universitaire' => $inscription && $inscription->anneeUniversitaire 
+                ? $inscription->anneeUniversitaire->libelle 
+                : '',
+            'filiere' => $inscription && $inscription->filiere 
+                ? $inscription->filiere->nom_filiere 
+                : '',
+            'niveau' => $inscription && $inscription->niveau 
+                ? $inscription->niveau->libelle 
+                : '',
+            'notes' => $notes,
+            'moyenne' => $decision ? $decision->moyenne_annuelle : '-',
+            'resultat' => $decision ? $decision->decision : 'En cours',
+            'mention' => $decision ? $decision->mention : '',
+            'session' => $decision ? $decision->type_session : 'Normale',
+            'date_emission' => now()->format('d/m/Y'),
+        ];
+
+        $html = $this->getReleveNotesTemplate($data);
+
         $filename = 'releve_notes_' . $demande->num_demande . '.pdf';
         $path = storage_path('app/public/documents/' . $filename);
         
@@ -138,10 +172,103 @@ class PDFService
             mkdir(dirname($path), 0755, true);
         }
         
-        $html = '<h1>Relevé de Notes</h1><p>Document en cours de développement</p>';
         $this->generatePDFFromHTML($html, $path);
         
         return $path;
+    }
+
+    private function getReleveNotesTemplate(array $data)
+    {
+        $logoPath = storage_path('app/public/logos/ensa.png');
+        $logoBase64 = '';
+        if (file_exists($logoPath)) {
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+
+        $notesRows = '';
+        foreach ($data['notes'] as $note) {
+            $moduleName = $note->moduleNiveau && $note->moduleNiveau->module 
+                ? $note->moduleNiveau->module->nom_module 
+                : 'Module';
+            $valeur = $note->note;
+            $statut = $note->est_valide ? 'V' : 'NV';
+            
+            $notesRows .= "<tr>
+                <td>{$moduleName}</td>
+                <td style='text-align: center;'>{$valeur}/20</td>
+                <td style='text-align: center;'>{$statut}</td>
+            </tr>";
+        }
+
+        if (empty($notesRows)) {
+            $notesRows = "<tr><td colspan='3' style='text-align: center;'>Aucune note disponible</td></tr>";
+        }
+
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { margin: 1cm; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 10pt; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .logo { height: 60px; margin-bottom: 10px; }
+        .title { font-size: 16pt; font-weight: bold; text-decoration: underline; margin: 20px 0; text-align: center; }
+        .info-block { margin-bottom: 20px; }
+        .info-row { margin: 5px 0; }
+        .label { font-weight: bold; width: 150px; display: inline-block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #000; padding: 6px; }
+        th { background-color: #f0f0f0; }
+        .footer { margin-top: 30px; text-align: right; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{$logoBase64}" class="logo"><br>
+        <strong>Université Abdelmalek Essaâdi</strong><br>
+        Ecole Nationale des Sciences Appliquées - Tétouan
+    </div>
+
+    <div class="title">RELEVÉ DE NOTES</div>
+
+    <div class="info-block">
+        <div class="info-row"><span class="label">Etudiant:</span> {$data['nom']} {$data['prenom']}</div>
+        <div class="info-row"><span class="label">Code Apogée:</span> {$data['apogee']}</div>
+        <div class="info-row"><span class="label">C.I.N:</span> {$data['cin']}</div>
+        <div class="info-row"><span class="label">Filière:</span> {$data['filiere']}</div>
+        <div class="info-row"><span class="label">Niveau:</span> {$data['niveau']}</div>
+        <div class="info-row"><span class="label">Année Univ:</span> {$data['annee_universitaire']}</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Module</th>
+                <th>Note</th>
+                <th>Résultat</th>
+            </tr>
+        </thead>
+        <tbody>
+            {$notesRows}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td style="text-align: right; font-weight: bold;">Moyenne Générale</td>
+                <td style="text-align: center; font-weight: bold;">{$data['moyenne']}/20</td>
+                <td>Run: {$data['session']} - {$data['resultat']}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="footer">
+        Fait à Tétouan, le {$data['date_emission']}<br><br>
+        <strong>Le Directeur</strong>
+    </div>
+</body>
+</html>
+HTML;
     }
 
     /**
@@ -172,7 +299,7 @@ class PDFService
     private function getAttestationScolaireTemplate(array $data)
     {
         $logoPath = storage_path('app/public/logos/ensa.png');
-        $signaturePath = storage_path('app/public/tampo/image.png');
+        $signaturePath = storage_path('app/public/tampo/img.png');
         
         $logoBase64 = '';
         if (file_exists($logoPath)) {

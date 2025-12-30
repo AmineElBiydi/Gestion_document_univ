@@ -8,19 +8,19 @@ use App\Models\Reclamation;
 use App\Models\Etudiant;
 use Illuminate\Support\Facades\Mail;
 use App\Services\EmailService;
-use App\Services\PdfService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use App\Mail\DemandeValidee;
-use App\Models\DemandeHistorique;
-
-class AdminController extends Controller
-{
-    protected $emailService;
-    protected $pdfService;
-
-    public function __construct(EmailService $emailService, PdfService $pdfService)
+use App\Services\PDFService;
+    use Illuminate\Http\Request;
+    use Illuminate\Support\Facades\Hash;
+    use App\Mail\DemandeValidee;
+    use App\Models\DemandeHistorique;
+    
+    class AdminController extends Controller
     {
+        protected $emailService;
+        protected $pdfService;
+    
+        public function __construct(EmailService $emailService, PDFService $pdfService)
+        {
         $this->emailService = $emailService;
         $this->pdfService = $pdfService;
     }

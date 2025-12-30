@@ -35,7 +35,8 @@ class EmailService
     {
         try {
             $pdfPath = null;
-            $pdfService = app(PdfService::class);
+            $pdfPath = null;
+            $pdfService = app(\App\Services\PDFService::class);
             
             // Générer le PDF
             try {
