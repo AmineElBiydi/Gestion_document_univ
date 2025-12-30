@@ -189,7 +189,7 @@ export default function Demande() {
     // Check required details based on document type
     switch (selectedAction) {
       case "attestation_scolaire":
-        return true; // No additional details needed for attestation scolarite
+        return true;
       case "attestation_reussite":
         return details.annee;
       case "releve_notes":
@@ -487,7 +487,6 @@ export default function Demande() {
               </SelectContent>
             </Select>
           </div>
-          \
         </>
       ),
       releve_notes: (
