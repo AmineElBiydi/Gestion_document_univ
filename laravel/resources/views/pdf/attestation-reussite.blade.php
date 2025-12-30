@@ -68,37 +68,7 @@
             z-index: 1;
         }
         .signature-section {
-            position: relative;
-            margin-top: 80pt;
-            z-index: 2;
-        }
-        .signature-box {
-            position: absolute;
-            right: 40pt;
-            top: 0;
-            text-align: center;
-        }
-        .signature-title {
-            font-size: 11pt;
-            font-weight: bold;
-            margin-bottom: 10pt;
-        }
-        .stamp-area {
-            width: 100pt;
-            height: 80pt;
-            position: relative;
-            margin: 10pt auto;
-        }
-        .signature-name {
-            font-weight: bold;
-            font-size: 11pt;
-            margin-top: 5pt;
-        }
-        .date-location {
-            position: absolute;
-            right: 40pt;
-            bottom: 180pt;
-            font-size: 10pt;
+            /* Handled inline/flow */
         }
         .footer-info {
             position: absolute;
@@ -170,18 +140,22 @@
         <div class="diagonal-line"></div>
     </div>
 
-    <div class="signature-section">
-        <div class="signature-box">
-            <div class="signature-title">Le Directeur</div>
-            <div class="stamp-area">
-                <!-- Stamp will appear here when printed -->
-            </div>
-            <div class="signature-name">Kamal REKLAOUI</div>
+    <div class="footer-layout" style="margin-top: 50pt; padding-right: 40pt;">
+        <div class="date-location" style="text-align: right; margin-bottom: 20pt; font-size: 10pt;">
+            Fait à TETOUAN, le {{ now()->translatedFormat('d F Y') }}
         </div>
-    </div>
 
-    <div class="date-location">
-        Fait à TETOUAN, le {{ now()->translatedFormat('d F Y') }}
+        <div class="signature-section" style="text-align: right; margin-top: 20px;">
+            <div class="signature-box" style="display: inline-block; text-align: center; min-width: 200px;">
+                <div class="signature-title" style="font-weight: bold; margin-bottom: 20px;">Le Directeur</div>
+                <div class="stamp-area" style="height: 120px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                    @if(isset($signatureBase64))
+                        <img src="{{ $signatureBase64 }}" style="max-width: 180px; max-height: 100px;" alt="Signature">
+                    @endif
+                </div>
+                <div class="signature-name" style="font-weight: bold;">Kamal REKLAOUI</div>
+            </div>
+        </div>
     </div>
 
     <div class="footer-info">

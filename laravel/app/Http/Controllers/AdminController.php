@@ -725,4 +725,63 @@ use App\Services\PDFService;
             'data' => $demande
         ]);
     }
+    /**
+     * Exporter l'historique en PDF
+     */
+    public function exportHistoriquePDF(Request $request)
+    {
+        $query = Demande::with([
+            'etudiant',
+            'reclamations',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee.inscription.filiere',
+            'attestationReussite.decisionAnnee.inscription.niveau',
+            'attestationReussite.decisionAnnee.inscription.anneeUniversitaire',
+            'releveNotes.decisionAnnee.inscription.filiere',
+            'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
+            'conventionStage.encadrantPedagogique',
+            'traiteParAdmin',
+        ])
+            ->whereIn('status', ['validee', 'rejetee']);
+
+        // Filtres
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('type_document') && $request->type_document !== 'all') {
+            $query->where('type_document', $request->type_document);
+        }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->whereHas('etudiant', function ($q) use ($search) {
+                $q->where('apogee', 'like', "%{$search}%")
+                  ->orWhere('cin', 'like', "%{$search}%")
+                  ->orWhere('nom', 'like', "%{$search}%")
+                  ->orWhere('prenom', 'like', "%{$search}%");
+            })->orWhere('num_demande', 'like', "%{$search}%");
+        }
+
+        if ($request->has('date_debut') && $request->has('date_fin')) {
+            $query->whereBetween('date_demande', [$request->date_debut, $request->date_fin]);
+        }
+
+        $demandes = $query->orderBy('updated_at', 'desc')->get();
+
+        if ($demandes->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Aucune donnée à exporter'], 404);
+        }
+
+        try {
+            $path = $this->pdfService->generateHistoriquePDF($demandes);
+            return response()->download($path)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            \Log::error('Export PDF failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Erreur lors de la génération du PDF'], 500);
+        }
+    }
 }

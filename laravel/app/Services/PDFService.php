@@ -4,9 +4,13 @@ namespace App\Services;
 
 use App\Models\Demande;
 use App\Models\Etudiant;
+use App\Models\DecisionAnnee;
+use App\Models\Note;
 use Illuminate\Support\Facades\Storage;
 use App\Services\ConventionStagePDF;
 use App\Services\AttestationReussitePDF;
+use Barryvdh\DomPDF\Facade\Pdf;
+use ArPHP\I18N\Arabic;
 
 class PDFService
 {
@@ -49,46 +53,57 @@ class PDFService
     }
 
     /**
-     * Generate Attestation de Scolarité PDF
+     * Alias for generateReleveNotes for consistency with DemandeController
      */
+    public function genererReleveNotes(Demande $demande)
+    {
+        return $this->generatePDF($demande);
+    }
+
     private function generateAttestationScolaire(Demande $demande, Etudiant $etudiant)
     {
         // Get inscription details
         $inscription = $demande->inscription;
         
+        // Fallback to latest inscription if not directly associated
+        if (!$inscription) {
+            $inscription = $etudiant->inscriptions()
+                ->with(['filiere', 'niveau', 'anneeUniversitaire'])
+                ->orderBy('created_at', 'desc')
+                ->first();
+        }
+        
+        $arabic = new Arabic();
+        
         // Prepare data for the template
         $data = [
-            'nom' => strtoupper($etudiant->nom),
-            'prenom' => ucfirst(strtolower($etudiant->prenom)),
-            'cin' => $etudiant->cin,
-            'apogee' => $etudiant->apogee,
-            'date_naissance' => $etudiant->date_naissance ? $etudiant->date_naissance->format('d/m/Y') : '',
-            'lieu_naissance' => $etudiant->lieu_naissance ?? '',
-            'annee_universitaire' => $inscription && $inscription->anneeUniversitaire 
-                ? $inscription->anneeUniversitaire->libelle 
-                : now()->format('Y') . '/' . (now()->year + 1),
-            'diplome' => $inscription && $inscription->filiere 
-                ? $inscription->filiere->diplome ?? 'Années Préparatoires au Cycle Ingénieur'
-                : 'Années Préparatoires au Cycle Ingénieur',
-            'filiere' => $inscription && $inscription->filiere 
-                ? $inscription->filiere->nom_filiere 
-                : 'Années Préparatoires',
-            'annee' => $inscription && $inscription->niveau 
-                ? $inscription->niveau->libelle 
-                : '',
-            'date_emission' => now()->format('d/m/Y'),
-            'num_demande' => $demande->num_demande,
-            'num_etudiant' => $etudiant->apogee,
-            'adresse' => "M'Hannech II",
-            'bp' => 'B.P. 2222 Tétouan',
-            'tel' => '0539968802',
-            'fax' => '0539984624',
+            'etudiant' => $etudiant,
+            'inscription' => $inscription,
+            'demande' => $demande,
+            'royaume_ar' => $arabic->utf8Glyphs("المملكة المغربية"),
+            'univ_ar' => $arabic->utf8Glyphs("جامعة عبد المالك السعدي"),
+            'ecole_ar_1' => $arabic->utf8Glyphs("المدرسة الوطنية للعلوم التطبيقية"),
+            'ecole_ar_2' => $arabic->utf8Glyphs("بتطوان"),
+            'service_ar' => $arabic->utf8Glyphs("مصلحة الشؤون الطلابية"),
+            'adresse_ar' => $arabic->utf8Glyphs("المحننش الثاني ص.ب 2222 تطوان"),
+            'tel_ar' => $arabic->utf8Glyphs("الهاتف: 0539968802 الفاكس: 0539984624"),
         ];
 
-        // Generate HTML content
-        $html = $this->getAttestationScolaireTemplate($data);
+        // Load logo
+        $logoPath = storage_path('app/public/logos/ensa.png');
+        if (file_exists($logoPath)) {
+            $data['logoBase64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+
+        // Load signature
+        $signaturePath = storage_path('app/public/tampo/img.png');
+        if (file_exists($signaturePath)) {
+            $data['signatureBase64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($signaturePath));
+        }
+
+        // Generate PDF using Blade view
+        $pdf = Pdf::loadView('pdf.attestation_scolaire', $data);
         
-        // Convert HTML to PDF
         $filename = 'attestation_scolaire_' . $demande->num_demande . '.pdf';
         $path = storage_path('app/public/documents/' . $filename);
         
@@ -97,7 +112,7 @@ class PDFService
             mkdir(dirname($path), 0755, true);
         }
         
-        $this->generatePDFFromHTML($html, $path);
+        $pdf->save($path);
         
         return $path;
     }
@@ -134,36 +149,48 @@ class PDFService
     {
         // Get details
         $inscription = $demande->inscription;
-        $notes = $inscription ? $inscription->notes : collect([]);
+        $notes = $inscription ? $inscription->notes()->with('moduleNiveau.module')->get() : collect([]);
         $decision = $demande->releveNotes && $demande->releveNotes->decisionAnnee 
             ? $demande->releveNotes->decisionAnnee 
             : null;
 
+        // Logic for ranking (tempo)
+        $classement = '-';
+        $totalEtudiants = '-';
+        
+        if ($decision && $inscription) {
+            $query = DecisionAnnee::whereHas('inscription', function ($q) use ($inscription) {
+                $q->where('filiere_id', $inscription->filiere_id)
+                  ->where('niveau_id', $inscription->niveau_id)
+                  ->where('annee_id', $inscription->annee_id);
+            })->where('type_session', $decision->type_session);
+            
+            $totalEtudiants = $query->count();
+            $classement = $query->where('moyenne_annuelle', '>', $decision->moyenne_annuelle)->count() + 1;
+        }
+
+        $arabic = new Arabic();
+
         $data = [
-            'nom' => strtoupper($etudiant->nom),
-            'prenom' => ucfirst(strtolower($etudiant->prenom)),
-            'cin' => $etudiant->cin,
-            'apogee' => $etudiant->apogee,
-            'date_naissance' => $etudiant->date_naissance ? $etudiant->date_naissance->format('d/m/Y') : '',
-            'lieu_naissance' => $etudiant->lieu_naissance ?? '',
-            'annee_universitaire' => $inscription && $inscription->anneeUniversitaire 
-                ? $inscription->anneeUniversitaire->libelle 
-                : '',
-            'filiere' => $inscription && $inscription->filiere 
-                ? $inscription->filiere->nom_filiere 
-                : '',
-            'niveau' => $inscription && $inscription->niveau 
-                ? $inscription->niveau->libelle 
-                : '',
+            'etudiant' => $etudiant,
+            'inscription' => $inscription,
             'notes' => $notes,
-            'moyenne' => $decision ? $decision->moyenne_annuelle : '-',
-            'resultat' => $decision ? $decision->decision : 'En cours',
-            'mention' => $decision ? $decision->mention : '',
-            'session' => $decision ? $decision->type_session : 'Normale',
-            'date_emission' => now()->format('d/m/Y'),
+            'decision' => $decision,
+            'classement' => $classement,
+            'total_etudiants' => $totalEtudiants,
+            'demande' => $demande,
+            'univ_ar' => $arabic->utf8Glyphs("جامعة عبد المالك السعدي"),
+            'annee_univ_ar' => $arabic->utf8Glyphs("السنة الجامعية"),
+            'ecole_ar' => $arabic->utf8Glyphs("المدرسة الوطنية للعلوم التطبيقية - تطوان"),
         ];
 
-        $html = $this->getReleveNotesTemplate($data);
+        // Load signature
+        $signaturePath = storage_path('app/public/tampo/img.png');
+        if (file_exists($signaturePath)) {
+            $data['signatureBase64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($signaturePath));
+        }
+
+        $pdf = Pdf::loadView('pdf.releve_notes', $data);
 
         $filename = 'releve_notes_' . $demande->num_demande . '.pdf';
         $path = storage_path('app/public/documents/' . $filename);
@@ -172,7 +199,7 @@ class PDFService
             mkdir(dirname($path), 0755, true);
         }
         
-        $this->generatePDFFromHTML($html, $path);
+        $pdf->save($path);
         
         return $path;
     }
@@ -296,247 +323,6 @@ HTML;
         return $finalPath;
     }
 
-    private function getAttestationScolaireTemplate(array $data)
-    {
-        $logoPath = storage_path('app/public/logos/ensa.png');
-        $signaturePath = storage_path('app/public/tampo/img.png');
-        
-        $logoBase64 = '';
-        if (file_exists($logoPath)) {
-            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-        }
-
-        $signatureBase64 = '';
-        if (file_exists($signaturePath)) {
-            $signatureBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($signaturePath));
-        }
-
-        return <<<HTML
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        @page {
-            margin: 1cm 1.5cm 1cm 1.5cm;
-        }
-        body {
-            font-family: 'DejaVu Sans', 'Times New Roman', Times, serif;
-            font-size: 11pt;
-            line-height: 1.3;
-            color: #000;
-            margin: 0;
-            padding: 0;
-        }
-        .header-container {
-            display: table;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        .header-left {
-            display: table-cell;
-            width: 35%;
-            vertical-align: top;
-            font-size: 8pt;
-            line-height: 1.2;
-        }
-        .header-center {
-            display: table-cell;
-            width: 30%;
-            text-align: center;
-            vertical-align: top;
-        }
-        .header-right {
-            display: table-cell;
-            width: 35%;
-            text-align: right;
-            vertical-align: top;
-            font-size: 9pt;
-            line-height: 1.4;
-            direction: rtl;
-        }
-        .logo-img {
-            width: 70px;
-            height: auto;
-        }
-        .title {
-            text-align: center;
-            font-size: 16pt;
-            font-weight: bold;
-            margin: 20px 0 20px 0;
-            text-decoration: underline;
-            letter-spacing: 1px;
-        }
-        .content {
-            margin: 20px 0;
-            text-align: justify;
-        }
-        .content p {
-            margin: 10px 0;
-        }
-        .info-line {
-            margin: 6px 0;
-            line-height: 1.6;
-        }
-        .label {
-            display: inline-block;
-            width: 180px;
-            font-weight: normal;
-        }
-        .underline {
-            text-decoration: underline;
-        }
-        .signature-section {
-            margin-top: 40px;
-            text-align: right;
-        }
-        .signature-text {
-            margin-bottom: 5px;
-        }
-        .signature-img {
-            width: 180px;
-            height: auto;
-            margin: 5px 0 5px auto;
-        }
-        .footer-section {
-            margin-top: 30px;
-            font-size: 9pt;
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-        }
-        .footer-info {
-            display: table;
-            width: 100%;
-        }
-        .footer-left {
-            display: table-cell;
-            width: 50%;
-            font-size: 8pt;
-        }
-        .footer-right {
-            display: table-cell;
-            width: 50%;
-            text-align: right;
-            font-size: 8pt;
-            line-height: 1.4;
-            direction: rtl;
-        }
-        .footer-note {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 8pt;
-            font-style: italic;
-        }
-        .student-number {
-            text-align: right;
-            font-size: 9pt;
-            margin-top: 10px;
-        }
-        .arabic-text {
-            font-family: 'DejaVu Sans', sans-serif;
-            direction: rtl;
-            unicode-bidi: embed;
-        }
-    </style>
-</head>
-<body>
-    <div class="header-container">
-        <div class="header-left">
-            <strong>ROYAUME DU MAROC</strong><br>
-            Université Abdelmalek Essaâdi<br>
-            Ecole Nationale des Sciences<br>
-            Appliquées de<br>
-            Tétouan<br>
-            <u>Service des Affaires Estudiantines</u>
-        </div>
-        <div class="header-center">
-            <img src="{$logoBase64}" class="logo-img" alt="LOGO ENTSA">
-        </div>
-        <div class="header-right arabic-text">
-            <strong>المملكة المغربية</strong><br>
-            جامعة عبد المالك السعدي<br>
-            المدرسة الوطنية للعلوم التطبيقية<br>
-            بتطوان<br>
-            <u>مصلحة الشؤون الطلابية</u>
-        </div>
-    </div>
-
-    <div class="title">ATTESTATION DE SCOLARITE</div>
-
-    <div class="content">
-        <p>Le Directeur de l'Ecole Nationale des Sciences Appliquées de Tétouan atteste que l'étudiant :</p>
-        
-        <div style="margin: 20px 0;">
-            <div class="info-line">
-                <span class="label">Monsieur</span> <strong class="underline">{$data['nom']} {$data['prenom']}</strong>
-            </div>
-            
-            <div class="info-line">
-                <span class="label">Numéro de la CIN :</span> <span class="underline">{$data['cin']}</span>
-            </div>
-            
-            <div class="info-line">
-                <span class="label">Code national de l'étudiant :</span> <span class="underline">{$data['apogee']}</span>
-            </div>
-            
-            <div class="info-line">
-                né le <span class="underline">{$data['date_naissance']}</span> à <span class="underline">{$data['lieu_naissance']}</span>
-            </div>
-        </div>
-
-        <p>Poursuit ses études à l'Ecole Nationale des Sciences Appliquées Tétouan pour l'année universitaire <strong>{$data['annee_universitaire']}</strong></p>
-
-        <div style="margin: 20px 0;">
-            <div class="info-line">
-                <span class="label"><u>Diplôme</u></span> {$data['diplome']}
-            </div>
-            
-            <div class="info-line">
-                <span class="label"><u>Filière</u></span> {$data['filiere']}
-            </div>
-            
-            <div class="info-line">
-                <span class="label"><u>Année</u></span> {$data['annee']}
-            </div>
-        </div>
-    </div>
-
-    <div class="signature-section">
-        <div class="signature-text">
-            Fait à TETOUAN, le {$data['date_emission']}
-        </div>
-        <div class="signature-text">
-            Le Directeur
-        </div>
-        <img src="{$signatureBase64}" class="signature-img" alt="Signature">
-    </div>
-
-    <div class="footer-section">
-        <div class="footer-info">
-            <div class="footer-left">
-                <strong>Adresse</strong> {$data['adresse']}<br>
-                {$data['bp']}<br>
-                Tél: {$data['tel']} FAX : {$data['fax']}
-            </div>
-            <div class="footer-right arabic-text">
-                <strong>العنوان</strong> {$data['adresse']}<br>
-                ص ب {$data['bp']}<br>
-                {$data['tel']} :الهاتف {$data['fax']} :الفاكس
-            </div>
-        </div>
-        
-        <div class="footer-note">
-            Le présent document n'est délivré qu'en un seul exemplaire.<br>
-            Il appartient à l'étudiant d'en faire des photocopies certifiées conformes.
-        </div>
-        <div class="student-number">
-            <strong>N°étudiant :</strong> {$data['num_etudiant']}
-        </div>
-    </div>
-</body>
-</html>
-HTML;
-    }
 
 
     /**
@@ -611,9 +397,109 @@ HTML;
     }
 
     /**
+     * Generate Historique PDF
+     */
+    public function generateHistoriquePDF($demandes)
+    {
+        $logoPath = storage_path('app/public/logos/ensa.png');
+        $logoBase64 = '';
+        if (file_exists($logoPath)) {
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+
+        $rows = '';
+        foreach ($demandes as $demande) {
+            $etudiant = $demande->etudiant ? $demande->etudiant->prenom . ' ' . $demande->etudiant->nom : 'Inconnu';
+            $apogee = $demande->etudiant ? $demande->etudiant->apogee : '-';
+            $document = $demande->getTypeDocumentLabel();
+            $created = $demande->created_at ? $demande->created_at->format('d/m/Y') : '-';
+            $processed = $demande->date_traitement ? \Carbon\Carbon::parse($demande->date_traitement)->format('d/m/Y') : '-';
+            $status = ucfirst($demande->status);
+            
+            // Translate status
+            if ($demande->status == 'validee') $status = 'Validée';
+            if ($demande->status == 'rejetee') $status = 'Refusée';
+            if ($demande->status == 'en_attente') $status = 'En attente';
+
+            $rows .= "<tr>
+                <td>{$demande->num_demande}</td>
+                <td>{$etudiant}</td>
+                <td>{$apogee}</td>
+                <td>{$document}</td>
+                <td>{$created}</td>
+                <td>{$processed}</td>
+                <td>{$status}</td>
+            </tr>";
+        }
+
+        $date = now()->format('d/m/Y H:i');
+
+        $html = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 9pt; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .logo { height: 50px; margin-bottom: 10px; }
+        .title { font-size: 14pt; font-weight: bold; margin: 15px 0; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .footer { margin-top: 20px; text-align: right; font-size: 8pt; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{$logoBase64}" class="logo"><br>
+        <strong>Université Abdelmalek Essaâdi</strong><br>
+        Ecole Nationale des Sciences Appliquées - Tétouan
+    </div>
+
+    <div class="title">Historique des Demandes</div>
+    <div style="text-align: center; font-size: 9pt; margin-bottom: 15px;">Généré le {$date}</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>N° Demande</th>
+                <th>Étudiant</th>
+                <th>Apogée</th>
+                <th>Document</th>
+                <th>Créée le</th>
+                <th>Traitée le</th>
+                <th>Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {$rows}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Document généré automatiquement le {$date}
+    </div>
+</body>
+</html>
+HTML;
+
+        $filename = 'historique_' . now()->format('Y-m-d_His') . '.pdf';
+        $path = storage_path('app/temp/' . $filename);
+        
+        if (!file_exists(dirname($path))) {
+            mkdir(dirname($path), 0755, true);
+        }
+        
+        $this->generatePDFFromHTML($html, $path, 'landscape');
+        
+        return $path;
+    }
+
+    /**
      * Generate PDF from HTML using DomPDF
      */
-    private function generatePDFFromHTML($html, $path)
+    private function generatePDFFromHTML($html, $path, $orientation = 'portrait')
     {
         // Check if DomPDF is available
         if (class_exists('\Dompdf\Dompdf')) {
@@ -625,7 +511,7 @@ HTML;
             
             $dompdf = new \Dompdf\Dompdf($options);
             $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->setPaper('A4', $orientation);
             $dompdf->render();
             file_put_contents($path, $dompdf->output());
         } else {

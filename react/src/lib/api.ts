@@ -65,6 +65,7 @@ export const apiEndpoints = {
 
   // Historique page - finalized requests (accepted + refused)
   getHistorique: (params?: any) => api.get('/admin/historique', { params }),
+  exportHistoriquePDF: (params?: any) => api.get('/admin/historique/export-pdf', { params, responseType: 'blob' }),
   reverserDemande: (id: string) => api.put(`/admin/historique/${id}/reverser`),
 
   // Demande page - pending requests only

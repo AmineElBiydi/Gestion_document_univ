@@ -24,8 +24,17 @@ class AttestationReussitePDF
             'etudiant' => $etudiant,
             'inscription' => $inscription,
             'demande' => $demande,
+            'demande' => $demande,
             'univ_ar' => $arabic->utf8Glyphs("جامعة عبد المالك السعدي"),
         ];
+
+        // Load signature
+        $signaturePath = storage_path('app/public/tampo/img.png');
+        if (file_exists($signaturePath)) {
+            $data['signatureBase64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($signaturePath));
+        } else {
+            $data['signatureBase64'] = null;
+        }
         
         $pdf = Pdf::loadView('pdf.attestation-reussite', $data);
         

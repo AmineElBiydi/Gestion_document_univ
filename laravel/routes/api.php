@@ -23,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Historique page - finalized requests (accepted + refused)
     Route::get('/admin/historique', [AdminController::class, 'getHistorique']);
+    Route::get('/admin/historique/export-pdf', [AdminController::class, 'exportHistoriquePDF']);
     Route::put('/admin/historique/{id}/reverser', [AdminController::class, 'reverserDemande']);
     
     // Demande page - pending requests only

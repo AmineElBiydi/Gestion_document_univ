@@ -24,6 +24,22 @@ class ConventionStagePDF
             'ensa_ar' => $arabic->utf8Glyphs("المدرسة الوطنية للعلوم التطبيقية"),
             'tetouan_ar' => $arabic->utf8Glyphs("تطوان"),
         ];
+
+        // Load logo
+        $logoPath = storage_path('app/public/logos/ensa.png');
+        if (file_exists($logoPath)) {
+            $data['logoBase64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        } else {
+            $data['logoBase64'] = null;
+        }
+
+        // Load signature
+        $signaturePath = storage_path('app/public/tampo/img.png');
+        if (file_exists($signaturePath)) {
+            $data['signatureBase64'] = 'data:image/png;base64,' . base64_encode(file_get_contents($signaturePath));
+        } else {
+            $data['signatureBase64'] = null;
+        }
         
         $pdf = Pdf::loadView('pdf.convention-stage', $data);
         

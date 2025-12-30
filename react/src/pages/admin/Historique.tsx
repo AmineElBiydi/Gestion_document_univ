@@ -1,4 +1,4 @@
-  import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Layout } from "@/components/layout/Layout";
@@ -70,16 +70,17 @@ export default function AdminHistorique() {
   const { isAuthenticated, isLoading } = useAdminAuth();
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
-  
+
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  
+
   const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
   const [showReclamationDialog, setShowReclamationDialog] = useState(false);
+  const componentRef = useRef<HTMLDivElement>(null);
 
   // Load history data from API
   useEffect(() => {
@@ -98,41 +99,41 @@ export default function AdminHistorique() {
         type_document: typeFilter !== "all" ? typeFilter : undefined,
         search: searchQuery || undefined,
       });
-      
+
       if (response.data.success) {
         const demandes = response.data.data;
         console.log('Historique response data:', response.data);
         console.log('Demandes array:', demandes);
-        
+
         // Transform API data to frontend format
         console.log('Starting transformation of', demandes.length, 'demands');
         const transformedHistory = demandes.map((demande: any) => {
           console.log('Transforming demande:', demande);
           return {
-          id: demande.id.toString(),
-          requestNumber: demande.num_demande || `DMD-${new Date(demande.created_at).getFullYear()}-${String(demande.id).padStart(4, '0')}`,
-          student: demande.etudiant ? {
-            id: demande.etudiant.id.toString(),
-            email: demande.etudiant.email,
-            apogee: demande.etudiant.apogee,
-            cin: demande.etudiant.cin,
-            nom: demande.etudiant.nom,
-            prenom: demande.etudiant.prenom,
-            filiere: demande.etudiant.filiere || "Non spécifié",
-            niveau: demande.etudiant.niveau || "Non spécifié",
-          } : undefined,
-          documentType: demande.type_document as DocumentType,
-          status: demande.status as RequestStatus,
-          createdAt: new Date(demande.created_at),
-          processedAt: new Date(demande.updated_at),
-          processedBy: 'Admin', // TODO: Add admin tracking
-          refusalReason: demande.raison_refus,
-          details: getDocumentDetails(demande),
-          reclamation: demande.reclamations && demande.reclamations.length > 0 ? demande.reclamations[0] : undefined,
-        };
+            id: demande.id.toString(),
+            requestNumber: demande.num_demande || `DMD-${new Date(demande.created_at).getFullYear()}-${String(demande.id).padStart(4, '0')}`,
+            student: demande.etudiant ? {
+              id: demande.etudiant.id.toString(),
+              email: demande.etudiant.email,
+              apogee: demande.etudiant.apogee,
+              cin: demande.etudiant.cin,
+              nom: demande.etudiant.nom,
+              prenom: demande.etudiant.prenom,
+              filiere: demande.etudiant.filiere || "Non spécifié",
+              niveau: demande.etudiant.niveau || "Non spécifié",
+            } : undefined,
+            documentType: demande.type_document as DocumentType,
+            status: demande.status as RequestStatus,
+            createdAt: new Date(demande.created_at),
+            processedAt: new Date(demande.updated_at),
+            processedBy: 'Admin', // TODO: Add admin tracking
+            refusalReason: demande.raison_refus,
+            details: getDocumentDetails(demande),
+            reclamation: demande.reclamations && demande.reclamations.length > 0 ? demande.reclamations[0] : undefined,
+          };
         });
         console.log('Transformed history:', transformedHistory);
-        
+
         setHistory(transformedHistory);
       }
     } catch (error) {
@@ -154,7 +155,7 @@ export default function AdminHistorique() {
 
   const getDocumentDetails = (item: any): Record<string, string> => {
     const details: Record<string, string> = {};
-    
+
     if (item.attestationScolaire) {
       Object.assign(details, item.attestationScolaire);
     }
@@ -167,18 +168,125 @@ export default function AdminHistorique() {
     if (item.conventionStage) {
       Object.assign(details, item.conventionStage);
     }
-    
+
     return details;
   };
 
-  const handleExport = (format: "csv" | "pdf" | "excel") => {
-    toast.success(`Export ${format.toUpperCase()} en cours...`);
+  const handleExport = async (format: "csv" | "pdf" | "excel") => {
+    if (history.length === 0) {
+      toast.warning("Aucune donnée à exporter");
+      return;
+    }
+
+    try {
+      if (format === "pdf") {
+        const response = await apiEndpoints.exportHistoriquePDF({
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          type_document: typeFilter !== "all" ? typeFilter : undefined,
+          search: searchQuery || undefined,
+        });
+
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `historique_demandes_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success("Export PDF téléchargé");
+        return;
+      }
+
+      if (format === "excel") {
+        // Generate HTML Table for Excel for better formatting
+        const tableContent = `
+          <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="UTF-8">
+            <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Historique</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+          </head>
+          <body>
+            <table>
+              <thead>
+                <tr>
+                  <th>N° Demande</th>
+                  <th>Étudiant</th>
+                  <th>Apogée</th>
+                  <th>Document</th>
+                  <th>Créée le</th>
+                  <th>Traitée le</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${history.map(record => `
+                  <tr>
+                    <td>${record.requestNumber || "-"}</td>
+                    <td>${record.student ? `${record.student.prenom} ${record.student.nom}` : "Inconnu"}</td>
+                    <td>${record.student?.apogee || "-"}</td>
+                    <td>${documentTypeLabels[record.documentType] || record.documentType}</td>
+                    <td>${record.createdAt ? new Date(record.createdAt).toLocaleDateString("fr-FR") : "-"}</td>
+                    <td>${record.processedAt ? new Date(record.processedAt).toLocaleDateString("fr-FR") : "-"}</td>
+                    <td>${record.status || "-"}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+          </html>
+        `;
+        
+        const blob = new Blob([tableContent], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `historique_demandes_${new Date().toISOString().split('T')[0]}.xls`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success("Export Excel téléchargé");
+        return;
+      }
+
+      // CSV Export
+      const headers = ["N° Demande", "Étudiant", "Apogée", "Document", "Créée le", "Traitée le", "Statut"];
+      const rows = history.map(record => [
+        record.requestNumber || "-",
+        record.student ? `${record.student.prenom} ${record.student.nom}` : "Inconnu",
+        record.student?.apogee || "-",
+        documentTypeLabels[record.documentType] || record.documentType,
+        record.createdAt ? new Date(record.createdAt).toLocaleDateString("fr-FR") : "-",
+        record.processedAt ? new Date(record.processedAt).toLocaleDateString("fr-FR") : "-",
+        record.status || "-"
+      ]);
+
+      const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(";")).join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `historique_demandes_${new Date().toISOString().split('T')[0]}.csv`;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Export CSV téléchargé");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Erreur lors de l'export: " + (error as any).message);
+    }
   };
 
   const handleReverse = async (id: string) => {
     try {
       const result = await apiEndpoints.reverserDemande(id);
-      
+
       if (result.data.success) {
         toast.success("Demande inversée avec succès");
         // Reload the history to reflect the change
@@ -243,7 +351,7 @@ export default function AdminHistorique() {
                   <SelectContent>
                     <SelectItem value="all">Tous les statuts</SelectItem>
                     <SelectItem value="validee">Validée</SelectItem>
-                    <SelectItem value="refusee">Refusée</SelectItem>
+                    <SelectItem value="rejetee">Refusée</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -264,7 +372,7 @@ export default function AdminHistorique() {
           </div>
 
           {/* Table */}
-          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <div ref={componentRef} className="rounded-xl border border-border bg-card shadow-sm overflow-hidden p-4">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
@@ -341,17 +449,6 @@ export default function AdminHistorique() {
                               Réclamation
                             </Button>
                           )}
-                          {record.status === 'rejetee' && !record.reclamation && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleReverse(record.id)}
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            >
-                              <CheckCircle2 className="h-4 w-4 mr-1" />
-                              Inverser
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -409,7 +506,7 @@ export default function AdminHistorique() {
               Fermer
             </Button>
             {selectedRecord?.status === 'rejetee' && (
-              <Button 
+              <Button
                 onClick={() => {
                   handleReverse(selectedRecord.id);
                   setShowReclamationDialog(false);

@@ -117,7 +117,11 @@
             <div style="text-decoration: underline;">Tétouan</div>
         </div>
         <div class="header-center">
-            <img src="https://www.ensamaroc.com/school/7" alt="Logo" class="logo" />
+            @if(isset($logoBase64))
+                <img src="{{ $logoBase64 }}" alt="Logo" class="logo" />
+            @else
+                <div class="logo">Logo</div>
+            @endif
         </div>
         <div class="header-right">
             <div>{{ $univ_ar }}</div>
@@ -240,6 +244,11 @@
             <tr>
                 <td class="sig-cell">
                     <div class="sig-title">Signature et cachet de L'Etablissement</div>
+                    @if(isset($signatureBase64))
+                        <div style="margin-top: 10px;">
+                            <img src="{{ $signatureBase64 }}" style="width: 150px; height: auto;" alt="Signature">
+                        </div>
+                    @endif
                 </td>
                 <td class="sig-cell">
                     <div class="sig-title">Signature et cachet de L'ENTREPRISE</div>

@@ -68,7 +68,7 @@ export default function AdminDemandes() {
   const { isAuthenticated, isLoading } = useAdminAuth();
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
-  
+
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   // If searching for a specific ID, show all types to ensure it's found
