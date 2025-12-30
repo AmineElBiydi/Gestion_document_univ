@@ -295,18 +295,21 @@ class AdminController extends Controller
                 'conventionStage'
             ])->findOrFail($id);
 
+        \DB::beginTransaction();
+
+        try {
             // Update demande status
-            $demande->update([
-                'status' => 'validee',
-                'date_traitement' => now(),
-                'traite_par_admin_id' => auth()->id(),
-            ]);
+            $demande->status = 'validee';
+            $demande->date_traitement = now();
+            $demande->traite_par_admin_id = auth()->id();
+            $demande->save();
 
             // Generate PDF
             $pdfPath = null;
             try {
                 $pdfPath = $this->pdfService->generatePDF($demande);
-                $demande->update(['fichier_genere_path' => $pdfPath]);
+                $demande->fichier_genere_path = $pdfPath;
+                $demande->save();
                 
                 // Update attestation_scolaires table with generation timestamp
                 if ($demande->type_document === 'attestation_scolaire' && $demande->attestationScolaire) {
@@ -314,36 +317,42 @@ class AdminController extends Controller
                         'updated_at' => now()
                     ]);
                 }
-            } catch (\Throwable $e) {
+            } catch (\Exception $e) {
                 \Log::error('PDF generation failed: ' . $e->getMessage());
                 \Log::error('Stack trace: ' . $e->getTraceAsString());
+                
+                // Still send email even if PDF generation fails
             }
 
-            // Send email notification to student with PDF attachment
-            $etudiant = $demande->etudiant;
-            $typeDocument = $demande->getTypeDocumentLabel();
-            
-            try {
-                Mail::to($etudiant->email)->send(
-                    new DemandeValidee($demande, $etudiant, $typeDocument, $pdfPath)
-                );
-            } catch (\Throwable $e) {
-                \Log::error('Email sending failed: ' . $e->getMessage());
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Demande validée avec succès.',
-                'data' => $demande->load('etudiant'),
-                'pdf_path' => $pdfPath
-            ]);
-        } catch (\Throwable $e) {
-            \Log::error('CRITICAL ERROR validerDemande: ' . $e->getMessage());
+            \DB::commit();
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Error validating demande: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur critique lors de la validation: ' . $e->getMessage()
+                'message' => 'Erreur lors de la validation: ' . $e->getMessage()
             ], 500);
         }
+
+        // Send email notification to student with PDF attachment
+        // Done after commit to avoid holding lock during email sending
+        $etudiant = $demande->etudiant;
+        $typeDocument = $demande->getTypeDocumentLabel();
+        
+        try {
+            Mail::to($etudiant->email)->send(
+                new DemandeValidee($demande, $etudiant, $typeDocument, $pdfPath)
+            );
+        } catch (\Exception $e) {
+            \Log::error('Email sending failed: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Demande validée avec succès.',
+            'data' => $demande->fresh()->load('etudiant'),
+            'pdf_path' => $pdfPath
+        ]);
     }
 
     /**
@@ -403,15 +412,18 @@ class AdminController extends Controller
 
         $demande = Demande::findOrFail($id);
 
-        $demande->update([
-            'status' => 'rejetee',
-            'raison_refus' => $request->raison,
-            'date_traitement' => now(),
-            'traite_par_admin_id' => auth()->id(),
-        ]);
+        $demande->status = 'rejetee';
+        $demande->raison_refus = $request->raison;
+        $demande->date_traitement = now();
+        $demande->traite_par_admin_id = auth()->id();
+        $demande->save();
 
         // Envoyer email de refus à l'étudiant
-        $this->emailService->envoyerRefusDemande($demande);
+        try {
+            $this->emailService->envoyerRefusDemande($demande);
+        } catch (\Exception $e) {
+            \Log::error('Email refus sending failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
