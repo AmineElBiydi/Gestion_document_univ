@@ -86,6 +86,7 @@ export default function AdminDemandes() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [refusalReason, setRefusalReason] = useState("");
+
   const [customReason, setCustomReason] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
