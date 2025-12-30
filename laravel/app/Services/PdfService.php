@@ -138,8 +138,43 @@ class PDFService
     /**
      * Generate Relevé de Notes PDF
      */
+    /**
+     * Generate Relevé de Notes PDF
+     */
     private function generateReleveNotes(Demande $demande, Etudiant $etudiant)
     {
+        // Get inscription details
+        $inscription = $demande->inscription;
+        
+        // Load notes with module details
+        $notes = $inscription->notes()
+            ->with(['moduleNiveau.module'])
+            ->get();
+            
+        $data = [
+            'nom' => strtoupper($etudiant->nom),
+            'prenom' => ucfirst(strtolower($etudiant->prenom)),
+            'cin' => $etudiant->cin,
+            'apogee' => $etudiant->apogee,
+            'date_naissance' => $etudiant->date_naissance ? $etudiant->date_naissance->format('d/m/Y') : '',
+            'lieu_naissance' => $etudiant->lieu_naissance ?? '',
+            'annee_universitaire' => $inscription && $inscription->anneeUniversitaire 
+                ? $inscription->anneeUniversitaire->libelle 
+                : now()->format('Y') . '/' . (now()->year + 1),
+            'filiere' => $inscription && $inscription->filiere 
+                ? $inscription->filiere->nom_filiere 
+                : 'Années Préparatoires',
+            'niveau' => $inscription && $inscription->niveau 
+                ? $inscription->niveau->libelle 
+                : '',
+            'date_emission' => now()->format('d/m/Y'),
+            'notes' => $notes,
+            'moyenne' => $inscription->decisionsAnnee->first() ? $inscription->decisionsAnnee->first()->moyenne_annuelle : 'N/A',
+            'resultat' => $inscription->decisionsAnnee->first() ? $inscription->decisionsAnnee->first()->decision : 'N/A',
+        ];
+
+        $html = $this->getReleveNotesTemplate($data);
+        
         $filename = 'releve_notes_' . $demande->num_demande . '.pdf';
         $path = storage_path('app/public/documents/' . $filename);
         
@@ -147,10 +182,164 @@ class PDFService
             mkdir(dirname($path), 0755, true);
         }
         
-        $html = '<h1>Relevé de Notes</h1><p>Document en cours de développement</p>';
         $this->generatePDFFromHTML($html, $path);
         
         return $path;
+    }
+
+    /**
+     * Get HTML template for Relevé de Notes
+     */
+    private function getReleveNotesTemplate(array $data)
+    {
+        $notesRows = '';
+        foreach ($data['notes'] as $note) {
+            $moduleName = $note->moduleNiveau && $note->moduleNiveau->module ? $note->moduleNiveau->module->nom_module : 'Module Inconnu';
+            $noteValue = number_format($note->note, 2);
+            $status = $note->est_valide ? 'Validé' : 'Non Validé';
+            $session = ucfirst($note->type_session);
+            
+            $notesRows .= "
+                <tr>
+                    <td>{$moduleName}</td>
+                    <td style='text-align: center;'>{$noteValue}</td>
+                    <td style='text-align: center;'>{$session}</td>
+                    <td style='text-align: center;'>{$status}</td>
+                </tr>
+            ";
+        }
+
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 1.4;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .title {
+            text-align: center;
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 30px 0;
+            text-decoration: underline;
+        }
+        .student-info {
+            margin-bottom: 30px;
+        }
+        .student-info table {
+            width: 100%;
+        }
+        .student-info td {
+            padding: 5px;
+            vertical-align: top;
+        }
+        .notes-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .notes-table th, .notes-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            font-size: 11pt;
+        }
+        .notes-table th {
+            background-color: #f2f2f2;
+            text-align: center;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: right;
+        }
+        .total-section {
+            width: 50%;
+            margin-left: auto;
+            border: 1px solid #000;
+            padding: 10px;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <strong>ROYAUME DU MAROC</strong><br>
+        Université Abdelmalek Essaâdi<br>
+        Ecole Nationale des Sciences Appliquées de Tétouan
+    </div>
+
+    <div class="title">RELEVÉ DE NOTES</div>
+
+    <div class="student-info">
+        <table>
+            <tr>
+                <td width="20%"><strong>Nom et Prénom:</strong></td>
+                <td>{$data['nom']} {$data['prenom']}</td>
+                <td width="20%"><strong>N° Apogée:</strong></td>
+                <td>{$data['apogee']}</td>
+            </tr>
+            <tr>
+                <td><strong>C.I.N:</strong></td>
+                <td>{$data['cin']}</td>
+                <td><strong>Né le:</strong></td>
+                <td>{$data['date_naissance']} à {$data['lieu_naissance']}</td>
+            </tr>
+            <tr>
+                <td><strong>Filière:</strong></td>
+                <td colspan="3">{$data['filiere']}</td>
+            </tr>
+            <tr>
+                <td><strong>Niveau:</strong></td>
+                <td colspan="3">{$data['niveau']}</td>
+            </tr>
+            <tr>
+                <td><strong>Année Univ:</strong></td>
+                <td colspan="3">{$data['annee_universitaire']}</td>
+            </tr>
+        </table>
+    </div>
+
+    <table class="notes-table">
+        <thead>
+            <tr>
+                <th>Module</th>
+                <th width="15%">Note / 20</th>
+                <th width="20%">Session</th>
+                <th width="20%">Résultat</th>
+            </tr>
+        </thead>
+        <tbody>
+            {$notesRows}
+        </tbody>
+    </table>
+
+    <div class="total-section">
+        <table>
+            <tr>
+                <td><strong>Moyenne Annuelle:</strong></td>
+                <td>{$data['moyenne']} / 20</td>
+            </tr>
+            <tr>
+                <td><strong>Résultat:</strong></td>
+                <td>{$data['resultat']}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <p>Fait à Tétouan, le {$data['date_emission']}</p>
+        <p><strong>Le Directeur</strong></p>
+    </div>
+</body>
+</html>
+HTML;
     }
 
     /**
