@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # Laravel App (Backend)
+  app:
+    build:
+      context: ./laravel
+      dockerfile: Dockerfile
+    image: laravel-app
+    container_name: laravel-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./laravel:/var/www
+    networks:
+      - app-network
+
+  # Nginx (Web Server for Laravel)
+  web:
+    image: nginx:alpine
+    container_name: laravel-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./laravel:/var/www
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
+    networks:
+      - app-network
+
+  # React App (Frontend)
+  frontend:
+    build:
+      context: ./react
+      dockerfile: Dockerfile
+    image: react-app
+    container_name: react-app
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./react:/app
+      - /app/node_modules
+    networks:
+      - app-network
+
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: laravel-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-gest_doc_univ}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_USER: ${DB_USERNAME:-laravel_user}
+    volumes:
+      - dbdata:/var/lib/mysql
+    ports:
+      - "33060:3306" # Mapped to 33060 to avoid conflict with local MySQL if running
+    networks:
+      - app-network
+
+  # PhpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local
