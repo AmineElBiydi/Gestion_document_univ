@@ -1,4 +1,4 @@
-  import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Layout } from "@/components/layout/Layout";
@@ -70,14 +70,14 @@ export default function AdminHistorique() {
   const { isAuthenticated, isLoading } = useAdminAuth();
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
-  
+
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  
+
   const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
   const [showReclamationDialog, setShowReclamationDialog] = useState(false);
 
@@ -98,41 +98,41 @@ export default function AdminHistorique() {
         type_document: typeFilter !== "all" ? typeFilter : undefined,
         search: searchQuery || undefined,
       });
-      
+
       if (response.data.success) {
         const demandes = response.data.data;
         console.log('Historique response data:', response.data);
         console.log('Demandes array:', demandes);
-        
+
         // Transform API data to frontend format
         console.log('Starting transformation of', demandes.length, 'demands');
         const transformedHistory = demandes.map((demande: any) => {
           console.log('Transforming demande:', demande);
           return {
-          id: demande.id.toString(),
-          requestNumber: demande.num_demande || `DMD-${new Date(demande.created_at).getFullYear()}-${String(demande.id).padStart(4, '0')}`,
-          student: demande.etudiant ? {
-            id: demande.etudiant.id.toString(),
-            email: demande.etudiant.email,
-            apogee: demande.etudiant.apogee,
-            cin: demande.etudiant.cin,
-            nom: demande.etudiant.nom,
-            prenom: demande.etudiant.prenom,
-            filiere: demande.etudiant.filiere || "Non spécifié",
-            niveau: demande.etudiant.niveau || "Non spécifié",
-          } : undefined,
-          documentType: demande.type_document as DocumentType,
-          status: demande.status as RequestStatus,
-          createdAt: new Date(demande.created_at),
-          processedAt: new Date(demande.updated_at),
-          processedBy: 'Admin', // TODO: Add admin tracking
-          refusalReason: demande.raison_refus,
-          details: getDocumentDetails(demande),
-          reclamation: demande.reclamations && demande.reclamations.length > 0 ? demande.reclamations[0] : undefined,
-        };
+            id: demande.id.toString(),
+            requestNumber: demande.num_demande || `DMD-${new Date(demande.created_at).getFullYear()}-${String(demande.id).padStart(4, '0')}`,
+            student: demande.etudiant ? {
+              id: demande.etudiant.id.toString(),
+              email: demande.etudiant.email,
+              apogee: demande.etudiant.apogee,
+              cin: demande.etudiant.cin,
+              nom: demande.etudiant.nom,
+              prenom: demande.etudiant.prenom,
+              filiere: demande.etudiant.filiere || "Non spécifié",
+              niveau: demande.etudiant.niveau || "Non spécifié",
+            } : undefined,
+            documentType: demande.type_document as DocumentType,
+            status: demande.status as RequestStatus,
+            createdAt: new Date(demande.created_at),
+            processedAt: new Date(demande.updated_at),
+            processedBy: 'Admin', // TODO: Add admin tracking
+            refusalReason: demande.raison_refus,
+            details: getDocumentDetails(demande),
+            reclamation: demande.reclamations && demande.reclamations.length > 0 ? demande.reclamations[0] : undefined,
+          };
         });
         console.log('Transformed history:', transformedHistory);
-        
+
         setHistory(transformedHistory);
       }
     } catch (error) {
@@ -154,7 +154,7 @@ export default function AdminHistorique() {
 
   const getDocumentDetails = (item: any): Record<string, string> => {
     const details: Record<string, string> = {};
-    
+
     if (item.attestationScolaire) {
       Object.assign(details, item.attestationScolaire);
     }
@@ -167,18 +167,54 @@ export default function AdminHistorique() {
     if (item.conventionStage) {
       Object.assign(details, item.conventionStage);
     }
-    
+
     return details;
   };
 
-  const handleExport = (format: "csv" | "pdf" | "excel") => {
-    toast.success(`Export ${format.toUpperCase()} en cours...`);
+  const downloadFile = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleExport = async (format: "csv" | "pdf" | "excel") => {
+    toast.info(`Export ${format.toUpperCase()} en cours...`);
+    try {
+      const params = {
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        type_document: typeFilter !== "all" ? typeFilter : undefined,
+        search: searchQuery || undefined,
+      };
+
+      let response;
+      if (format === "csv") {
+        response = await apiEndpoints.exportHistoriqueCSV(params);
+      } else if (format === "excel") {
+        response = await apiEndpoints.exportHistoriqueExcel(params);
+      } else {
+        response = await apiEndpoints.exportHistoriquePDF(params);
+      }
+
+      const extension = format === "excel" ? "xls" : format;
+      const filename = `historique_${new Date().toISOString().slice(0, 10)}_${new Date().getTime()}.${extension}`;
+
+      downloadFile(response.data, filename);
+      toast.success(`Export ${format.toUpperCase()} réussi`);
+    } catch (error) {
+      console.error(`Export ${format} error:`, error);
+      toast.error(`Erreur lors de l'export ${format.toUpperCase()}`);
+    }
   };
 
   const handleReverse = async (id: string) => {
     try {
       const result = await apiEndpoints.reverserDemande(id);
-      
+
       if (result.data.success) {
         toast.success("Demande inversée avec succès");
         // Reload the history to reflect the change
@@ -409,7 +445,7 @@ export default function AdminHistorique() {
               Fermer
             </Button>
             {selectedRecord?.status === 'rejetee' && (
-              <Button 
+              <Button
                 onClick={() => {
                   handleReverse(selectedRecord.id);
                   setShowReclamationDialog(false);

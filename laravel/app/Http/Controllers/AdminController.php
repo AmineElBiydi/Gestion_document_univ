@@ -595,47 +595,8 @@ class AdminController extends Controller
      */
     public function getHistorique(Request $request)
     {
-        $query = Demande::with([
-            'etudiant',
-            'reclamations', // Add this
-            'inscription.filiere',
-            'inscription.niveau',
-            'inscription.anneeUniversitaire',
-            'attestationScolaire',
-            'attestationReussite.decisionAnnee.inscription.filiere',
-            'attestationReussite.decisionAnnee.inscription.niveau',
-            'attestationReussite.decisionAnnee.inscription.anneeUniversitaire',
-            'releveNotes.decisionAnnee.inscription.filiere',
-            'releveNotes.decisionAnnee.inscription.anneeUniversitaire',
-            'conventionStage.encadrantPedagogique',
-            'traiteParAdmin',
-        ])
-            ->whereIn('status', ['validee', 'rejetee']);
 
-        // Filtres
-        if ($request->has('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('type_document') && $request->type_document !== 'all') {
-            $query->where('type_document', $request->type_document);
-        }
-
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->whereHas('etudiant', function ($q) use ($search) {
-                $q->where('apogee', 'like', "%{$search}%")
-                  ->orWhere('cin', 'like', "%{$search}%")
-                  ->orWhere('nom', 'like', "%{$search}%")
-                  ->orWhere('prenom', 'like', "%{$search}%");
-            })->orWhere('num_demande', 'like', "%{$search}%");
-        }
-
-        if ($request->has('date_debut') && $request->has('date_fin')) {
-            $query->whereBetween('date_demande', [$request->date_debut, $request->date_fin]);
-        }
-
-        $demandes = $query->orderBy('updated_at', 'desc')->get();
+        $demandes = $this->getHistoriqueQuery($request)->get();
 
         return response()->json([
             'success' => true,
@@ -724,5 +685,143 @@ class AdminController extends Controller
             'message' => 'Demande inversée avec succès',
             'data' => $demande
         ]);
+    }
+
+    /**
+     * Exporter l'historique en CSV
+     */
+    public function exportCSV(Request $request)
+    {
+        $demandes = $this->getHistoriqueQuery($request)->get();
+        $filename = 'historique_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        $headers = [
+            "Content-type"        => "text/csv; charset=UTF-8",
+            "Content-Disposition" => "attachment; filename=$filename",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $callback = function() use($demandes) {
+            $file = fopen('php://output', 'w');
+            // Add BOM for Excel compatibility with UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            fputcsv($file, ['N° Demande', 'Etudiant', 'Apogee', 'Document', 'Date Creation', 'Date Traitement', 'Statut']);
+
+            foreach ($demandes as $demande) {
+                fputcsv($file, [
+                    $demande->num_demande,
+                    $demande->etudiant ? $demande->etudiant->nom . ' ' . $demande->etudiant->prenom : 'N/A',
+                    $demande->etudiant ? $demande->etudiant->apogee : 'N/A',
+                    $demande->getTypeDocumentLabel(),
+                    $demande->created_at->format('d/m/Y'),
+                    $demande->updated_at->format('d/m/Y'),
+                    ucfirst($demande->status)
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Exporter l'historique en Excel (via format CSV compatible)
+     */
+    public function exportExcel(Request $request)
+    {
+        $demandes = $this->getHistoriqueQuery($request)->get();
+        $filename = 'historique_' . date('Y-m-d_H-i-s') . '.xls';
+        
+        $headers = [
+            "Content-type"        => "application/vnd.ms-excel; charset=UTF-8",
+            "Content-Disposition" => "attachment; filename=$filename",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        // We use a simple HTML table which Excel handles perfectly and allows basic styling
+        $callback = function() use($demandes) {
+            $file = fopen('php://output', 'w');
+            fwrite($file, '<html><head><meta charset="UTF-8"></head><body><table border="1">');
+            fwrite($file, '<tr><th>N° Demande</th><th>Etudiant</th><th>Apogee</th><th>Document</th><th>Date Creation</th><th>Date Traitement</th><th>Statut</th></tr>');
+            
+            foreach ($demandes as $demande) {
+                fwrite($file, '<tr>');
+                fwrite($file, '<td>' . $demande->num_demande . '</td>');
+                fwrite($file, '<td>' . ($demande->etudiant ? $demande->etudiant->nom . ' ' . $demande->etudiant->prenom : 'N/A') . '</td>');
+                fwrite($file, '<td>' . ($demande->etudiant ? $demande->etudiant->apogee : 'N/A') . '</td>');
+                fwrite($file, '<td>' . $demande->getTypeDocumentLabel() . '</td>');
+                fwrite($file, '<td>' . $demande->created_at->format('d/m/Y') . '</td>');
+                fwrite($file, '<td>' . $demande->updated_at->format('d/m/Y') . '</td>');
+                fwrite($file, '<td>' . ucfirst($demande->status) . '</td>');
+                fwrite($file, '</tr>');
+            }
+            
+            fwrite($file, '</table></body></html>');
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Exporter l'historique en PDF
+     */
+    public function exportPDF(Request $request)
+    {
+        $demandes = $this->getHistoriqueQuery($request)->get();
+        
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.historique-list', [
+            'demandes' => $demandes
+        ]);
+        
+        return $pdf->download('historique_' . date('Y-m-d_H-i-s') . '.pdf');
+    }
+
+    /**
+     * Obtenir la requête de base pour l'historique
+     */
+    private function getHistoriqueQuery(Request $request)
+    {
+        $query = Demande::with([
+            'etudiant',
+            'reclamations',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'traiteParAdmin',
+        ])
+            ->whereIn('status', ['validee', 'rejetee']);
+
+        // Filtres
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('type_document') && $request->type_document !== 'all') {
+            $query->where('type_document', $request->type_document);
+        }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('etudiant', function ($sub) use ($search) {
+                    $sub->where('apogee', 'like', "%{$search}%")
+                        ->orWhere('cin', 'like', "%{$search}%")
+                        ->orWhere('nom', 'like', "%{$search}%")
+                        ->orWhere('prenom', 'like', "%{$search}%");
+                })->orWhere('num_demande', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('date_debut') && $request->has('date_fin')) {
+            $query->whereBetween('date_demande', [$request->date_debut, $request->date_fin]);
+        }
+
+        return $query->orderBy('updated_at', 'desc');
     }
 }
