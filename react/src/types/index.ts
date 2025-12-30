@@ -62,6 +62,7 @@ export interface Reclamation {
   response?: string;
   createdAt: Date | string;
   updatedAt: Date | string;
+  demandStatus?: RequestStatus;
 }
 
 export const documentTypeLabels: Record<DocumentType, string> = {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Layout } from "@/components/layout/Layout";
 import { DemandesSkeleton } from "@/components/shared/Skeleton";
@@ -65,9 +66,13 @@ const refusalReasons = [
 
 export default function AdminDemandes() {
   const { isAuthenticated, isLoading } = useAdminAuth();
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get("search") || "";
+  
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("attestation_scolaire");
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  // If searching for a specific ID, show all types to ensure it's found
+  const [typeFilter, setTypeFilter] = useState<string>(initialSearch ? "all" : "attestation_scolaire");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'createdAt', direction: 'desc' });
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);

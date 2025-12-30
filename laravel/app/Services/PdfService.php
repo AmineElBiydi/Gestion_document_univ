@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Demande;
 use App\Models\Etudiant;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ConventionStagePDF;
+use App\Services\AttestationReussitePDF;
 
 class PDFService
 {
@@ -104,35 +106,24 @@ class PDFService
      */
     private function generateAttestationReussite(Demande $demande, Etudiant $etudiant)
     {
-        $attestation = $demande->attestationReussite;
-        $decision = $attestation ? $attestation->decisionAnnee : null;
-        $inscription = $decision ? $decision->inscription : null;
+        // Use the dedicated AttestationReussitePDF class with Blade view
+        $generator = new AttestationReussitePDF();
+        $tempPath = $generator->generate($demande);
         
-        $data = [
-            'studentName' => $etudiant->nom . ' ' . $etudiant->prenom,
-            'cinNumber' => $etudiant->cin,
-            'apogeeNumber' => $etudiant->apogee,
-            'academicYear' => $inscription ? $inscription->anneeUniversitaire->libelle : 'N/A',
-            'filiere' => $inscription && $inscription->filiere ? $inscription->filiere->nom_filiere : 'N/A',
-            'decision' => $decision ? $decision->decision : 'N/A',
-            'mention' => $decision ? $decision->mention : 'N/A',
-            'moyenne' => $decision ? $decision->moyenne_annuelle : 'N/A',
-            'dateIssued' => now()->format('d/m/Y'),
-            'requestNumber' => $demande->num_demande,
-        ];
-
-        $html = $this->getAttestationReussiteTemplate($data);
-        
+        // Move from temp to public/documents for consistency
         $filename = 'attestation_reussite_' . $demande->num_demande . '.pdf';
-        $path = storage_path('app/public/documents/' . $filename);
+        $finalPath = storage_path('app/public/documents/' . $filename);
         
-        if (!file_exists(dirname($path))) {
-            mkdir(dirname($path), 0755, true);
+        if (!file_exists(dirname($finalPath))) {
+            mkdir(dirname($finalPath), 0755, true);
         }
         
-        $this->generatePDFFromHTML($html, $path);
+        // Move the file
+        if (file_exists($tempPath)) {
+            rename($tempPath, $finalPath);
+        }
         
-        return $path;
+        return $finalPath;
     }
 
     /**
@@ -158,17 +149,24 @@ class PDFService
      */
     private function generateConventionStage(Demande $demande, Etudiant $etudiant)
     {
-        $filename = 'convention_stage_' . $demande->num_demande . '.pdf';
-        $path = storage_path('app/public/documents/' . $filename);
+        // Use the dedicated ConventionStagePDF class with Blade view
+        $generator = new ConventionStagePDF();
+        $tempPath = $generator->generate($demande);
         
-        if (!file_exists(dirname($path))) {
-            mkdir(dirname($path), 0755, true);
+        // Move from temp to public/documents for consistency
+        $filename = 'convention_stage_' . $demande->num_demande . '.pdf';
+        $finalPath = storage_path('app/public/documents/' . $filename);
+        
+        if (!file_exists(dirname($finalPath))) {
+            mkdir(dirname($finalPath), 0755, true);
         }
         
-        $html = '<h1>Convention de Stage</h1><p>Document en cours de développement</p>';
-        $this->generatePDFFromHTML($html, $path);
+        // Move the file
+        if (file_exists($tempPath)) {
+            rename($tempPath, $finalPath);
+        }
         
-        return $path;
+        return $finalPath;
     }
 
     private function getAttestationScolaireTemplate(array $data)

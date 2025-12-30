@@ -1,4 +1,5 @@
   import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Layout } from "@/components/layout/Layout";
 import { HistoriqueSkeleton } from "@/components/shared/Skeleton";
@@ -19,6 +20,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DocumentType, documentTypeLabels, RequestStatus } from "@/types";
 import {
@@ -28,6 +38,7 @@ import {
   FileText,
   Calendar,
   CheckCircle2,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiEndpoints } from "@/lib/api";
@@ -52,16 +63,23 @@ interface HistoryRecord {
   processedBy?: string;
   refusalReason?: string;
   details: Record<string, string>;
+  reclamation?: any;
 }
 
 export default function AdminHistorique() {
   const { isAuthenticated, isLoading } = useAdminAuth();
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get("search") || "";
+  
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  
+  const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
+  const [showReclamationDialog, setShowReclamationDialog] = useState(false);
 
   // Load history data from API
   useEffect(() => {
@@ -110,6 +128,7 @@ export default function AdminHistorique() {
           processedBy: 'Admin', // TODO: Add admin tracking
           refusalReason: demande.raison_refus,
           details: getDocumentDetails(demande),
+          reclamation: demande.reclamations && demande.reclamations.length > 0 ? demande.reclamations[0] : undefined,
         };
         });
         console.log('Transformed history:', transformedHistory);
@@ -307,17 +326,33 @@ export default function AdminHistorique() {
                         <StatusBadge status={record.status} />
                       </TableCell>
                       <TableCell>
-                        {record.status === 'rejetee' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleReverse(record.id)}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Inverser
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {record.reclamation && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedRecord(record);
+                                setShowReclamationDialog(true);
+                              }}
+                              className="text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                            >
+                              <MessageSquare className="h-4 w-4 mr-1" />
+                              Réclamation
+                            </Button>
+                          )}
+                          {record.status === 'rejetee' && !record.reclamation && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReverse(record.id)}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-1" />
+                              Inverser
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -342,6 +377,52 @@ export default function AdminHistorique() {
           </div>
         </div>
       </div>
+
+
+      <Dialog open={showReclamationDialog} onOpenChange={setShowReclamationDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Réclamation associée</DialogTitle>
+            <DialogDescription>
+              Demande: {selectedRecord?.requestNumber}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRecord?.reclamation && (
+            <div className="space-y-4">
+              <div>
+                <Label>Motif de la réclamation</Label>
+                <div className="mt-1.5 p-3 rounded-lg bg-orange-50 border border-orange-100 text-sm">
+                  <span className="font-semibold block mb-1 capitalize">
+                    {selectedRecord.reclamation.type?.replace('_', ' ')}
+                  </span>
+                  {selectedRecord.reclamation.description}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                Reçu le {new Date(selectedRecord.reclamation.created_at).toLocaleDateString("fr-FR")}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowReclamationDialog(false)}>
+              Fermer
+            </Button>
+            {selectedRecord?.status === 'rejetee' && (
+              <Button 
+                onClick={() => {
+                  handleReverse(selectedRecord.id);
+                  setShowReclamationDialog(false);
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Accepter la réclamation & Inverser
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
