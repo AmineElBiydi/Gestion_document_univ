@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             EtudiantSeeder::class,
             InscriptionSeeder::class,
             NoteSeeder::class,
+            DecisionAnneeSeeder::class,
 
         ]);
     }
