@@ -171,11 +171,21 @@ class PDFService
         return $path;
     }
 
-    /**
-     * Get HTML template for Attestation de Scolarité - matching official format
-     */
     private function getAttestationScolaireTemplate(array $data)
     {
+        $logoPath = storage_path('app/public/logos/ensa.png');
+        $signaturePath = storage_path('app/public/tampo/image.png');
+        
+        $logoBase64 = '';
+        if (file_exists($logoPath)) {
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+
+        $signatureBase64 = '';
+        if (file_exists($signaturePath)) {
+            $signatureBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($signaturePath));
+        }
+
         return <<<HTML
 <!DOCTYPE html>
 <html>
@@ -183,12 +193,12 @@ class PDFService
     <meta charset="UTF-8">
     <style>
         @page {
-            margin: 2cm 2cm 2cm 2cm;
+            margin: 1cm 1.5cm 1cm 1.5cm;
         }
         body {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            line-height: 1.4;
+            font-family: 'DejaVu Sans', 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            line-height: 1.3;
             color: #000;
             margin: 0;
             padding: 0;
@@ -196,14 +206,14 @@ class PDFService
         .header-container {
             display: table;
             width: 100%;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
         .header-left {
             display: table-cell;
             width: 35%;
             vertical-align: top;
-            font-size: 9pt;
-            line-height: 1.3;
+            font-size: 8pt;
+            line-height: 1.2;
         }
         .header-center {
             display: table-cell;
@@ -217,97 +227,90 @@ class PDFService
             text-align: right;
             vertical-align: top;
             font-size: 9pt;
-            line-height: 1.3;
+            line-height: 1.4;
             direction: rtl;
         }
-        .logo-placeholder {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto;
-            border: 1px dashed #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 8pt;
-            color: #999;
+        .logo-img {
+            width: 70px;
+            height: auto;
         }
         .title {
             text-align: center;
-            font-size: 18pt;
+            font-size: 16pt;
             font-weight: bold;
-            margin: 50px 0 40px 0;
+            margin: 20px 0 20px 0;
             text-decoration: underline;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
         }
         .content {
-            margin: 30px 0;
+            margin: 20px 0;
             text-align: justify;
         }
         .content p {
-            margin: 15px 0;
+            margin: 10px 0;
         }
         .info-line {
-            margin: 8px 0;
-            line-height: 1.8;
+            margin: 6px 0;
+            line-height: 1.6;
         }
         .label {
             display: inline-block;
-            width: 200px;
+            width: 180px;
             font-weight: normal;
         }
         .underline {
             text-decoration: underline;
         }
         .signature-section {
-            margin-top: 80px;
+            margin-top: 40px;
             text-align: right;
         }
         .signature-text {
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
-        .signature-placeholder {
-            width: 150px;
-            height: 80px;
-            border: 1px dashed #ccc;
-            margin: 10px 0 10px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 8pt;
-            color: #999;
+        .signature-img {
+            width: 180px;
+            height: auto;
+            margin: 5px 0 5px auto;
         }
         .footer-section {
-            margin-top: 60px;
-            font-size: 10pt;
+            margin-top: 30px;
+            font-size: 9pt;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
         }
         .footer-info {
             display: table;
             width: 100%;
-            margin-top: 20px;
         }
         .footer-left {
             display: table-cell;
             width: 50%;
-            font-size: 9pt;
+            font-size: 8pt;
         }
         .footer-right {
             display: table-cell;
             width: 50%;
             text-align: right;
-            font-size: 9pt;
+            font-size: 8pt;
+            line-height: 1.4;
             direction: rtl;
         }
         .footer-note {
-            margin-top: 30px;
+            margin-top: 15px;
             text-align: center;
-            font-size: 9pt;
+            font-size: 8pt;
             font-style: italic;
         }
         .student-number {
-            position: absolute;
-            right: 2cm;
-            bottom: 3cm;
-            font-size: 10pt;
+            text-align: right;
+            font-size: 9pt;
+            margin-top: 10px;
+        }
+        .arabic-text {
+            font-family: 'DejaVu Sans', sans-serif;
+            direction: rtl;
+            unicode-bidi: embed;
         }
     </style>
 </head>
@@ -322,11 +325,9 @@ class PDFService
             <u>Service des Affaires Estudiantines</u>
         </div>
         <div class="header-center">
-            <div class="logo-placeholder">
-                LOGO
-            </div>
+            <img src="{$logoBase64}" class="logo-img" alt="LOGO ENTSA">
         </div>
-        <div class="header-right">
+        <div class="header-right arabic-text">
             <strong>المملكة المغربية</strong><br>
             جامعة عبد المالك السعدي<br>
             المدرسة الوطنية للعلوم التطبيقية<br>
@@ -340,13 +341,13 @@ class PDFService
     <div class="content">
         <p>Le Directeur de l'Ecole Nationale des Sciences Appliquées de Tétouan atteste que l'étudiant :</p>
         
-        <div style="margin: 30px 0;">
+        <div style="margin: 20px 0;">
             <div class="info-line">
                 <span class="label">Monsieur</span> <strong class="underline">{$data['nom']} {$data['prenom']}</strong>
             </div>
             
             <div class="info-line">
-                <span class="label">Numéro de la carte d'identité nationale :</span> <span class="underline">{$data['cin']}</span>
+                <span class="label">Numéro de la CIN :</span> <span class="underline">{$data['cin']}</span>
             </div>
             
             <div class="info-line">
@@ -360,7 +361,7 @@ class PDFService
 
         <p>Poursuit ses études à l'Ecole Nationale des Sciences Appliquées Tétouan pour l'année universitaire <strong>{$data['annee_universitaire']}</strong></p>
 
-        <div style="margin: 30px 0;">
+        <div style="margin: 20px 0;">
             <div class="info-line">
                 <span class="label"><u>Diplôme</u></span> {$data['diplome']}
             </div>
@@ -382,9 +383,7 @@ class PDFService
         <div class="signature-text">
             Le Directeur
         </div>
-        <div class="signature-placeholder">
-            Signature + Cachet
-        </div>
+        <img src="{$signatureBase64}" class="signature-img" alt="Signature">
     </div>
 
     <div class="footer-section">
@@ -394,10 +393,10 @@ class PDFService
                 {$data['bp']}<br>
                 Tél: {$data['tel']} FAX : {$data['fax']}
             </div>
-            <div class="footer-right">
+            <div class="footer-right arabic-text">
                 <strong>العنوان</strong> {$data['adresse']}<br>
                 ص ب {$data['bp']}<br>
-                {$data['fax']} :فاكس {$data['tel']} :هاتف
+                {$data['tel']} :الهاتف {$data['fax']} :الفاكس
             </div>
         </div>
         
@@ -405,15 +404,15 @@ class PDFService
             Le présent document n'est délivré qu'en un seul exemplaire.<br>
             Il appartient à l'étudiant d'en faire des photocopies certifiées conformes.
         </div>
-    </div>
-
-    <div class="student-number">
-        <strong>N°étudiant</strong> {$data['num_etudiant']}
+        <div class="student-number">
+            <strong>N°étudiant :</strong> {$data['num_etudiant']}
+        </div>
     </div>
 </body>
 </html>
 HTML;
     }
+
 
     /**
      * Get HTML template for Attestation de Réussite
@@ -496,7 +495,8 @@ HTML;
             $options = new \Dompdf\Options();
             $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);
-            $options->set('defaultFont', 'Times New Roman');
+            $options->set('isFontSubsettingEnabled', true);
+            $options->set('defaultFont', 'DejaVu Sans');
             
             $dompdf = new \Dompdf\Dompdf($options);
             $dompdf->loadHtml($html);
