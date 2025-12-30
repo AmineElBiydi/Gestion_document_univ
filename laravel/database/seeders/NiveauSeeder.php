@@ -42,17 +42,6 @@ class NiveauSeeder extends Seeder
                 'ordre' => 5,
             ],
 
-            // Master
-            [
-                'code_niveau' => 'M1',
-                'libelle' => 'Master - 1ère Année',
-                'ordre' => 6,
-            ],
-            [
-                'code_niveau' => 'M2',
-                'libelle' => 'Master - 2ème Année',
-                'ordre' => 7,
-            ],
         ];
 
         foreach ($niveaux as $niveau) {

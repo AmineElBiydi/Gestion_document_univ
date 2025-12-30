@@ -13,102 +13,83 @@ class ModuleSeeder extends Seeder
     public function run(): void
     {
         $modules = [
-            // Modules Cycle Préparatoire
-            ['code_module' => 'MATH101', 'nom_module' => 'Analyse Mathématique I', 'credits' => 6, 'description' => 'Fonctions, limites, dérivées et intégrales'],
-            ['code_module' => 'MATH102', 'nom_module' => 'Algèbre Linéaire', 'credits' => 5, 'description' => 'Espaces vectoriels, matrices et systèmes linéaires'],
-            ['code_module' => 'PHYS101', 'nom_module' => 'Physique I', 'credits' => 5, 'description' => 'Mécanique classique et thermodynamique'],
-            ['code_module' => 'INFO101', 'nom_module' => 'Introduction à la Programmation', 'credits' => 5, 'description' => 'Algorithmique et programmation en C'],
-            ['code_module' => 'LANG101', 'nom_module' => 'Anglais I', 'credits' => 2, 'description' => 'Communication en anglais technique'],
-            ['code_module' => 'COMM101', 'nom_module' => 'Communication et Expression', 'credits' => 2, 'description' => 'Techniques de communication écrite et orale'],
+            // Semestre 1 - Cycle Préparatoire
+            ['code_module' => 'ANL1', 'nom_module' => 'Analyse 1', 'credits' => 1, 'description' => 'Fonctions, limites, dérivées et intégrales'],
+            ['code_module' => 'ALG1', 'nom_module' => 'Algèbre 1', 'credits' => 1, 'description' => 'Espaces vectoriels, matrices et systèmes linéaires'],
+            ['code_module' => 'PHY1', 'nom_module' => 'Physique 1', 'credits' => 1, 'description' => 'Mécanique classique et cinématique'],
+            ['code_module' => 'MECA1', 'nom_module' => 'Mécanique 1', 'credits' => 1, 'description' => 'Statique et dynamique des systèmes'],
+            ['code_module' => 'INFO1', 'nom_module' => 'Informatique I', 'credits' => 1, 'description' => 'Algorithmique et programmation en C'],
+            ['code_module' => 'LC1', 'nom_module' => 'Language et Communication 1', 'credits' => 1, 'description' => 'Techniques de communication écrite et orale'],
 
-            ['code_module' => 'MATH201', 'nom_module' => 'Analyse Mathématique II', 'credits' => 6, 'description' => 'Séries, équations différentielles et analyse vectorielle'],
-            ['code_module' => 'MATH202', 'nom_module' => 'Probabilités et Statistiques', 'credits' => 4, 'description' => 'Théorie des probabilités et statistiques descriptives'],
-            ['code_module' => 'PHYS201', 'nom_module' => 'Physique II', 'credits' => 5, 'description' => 'Électromagnétisme et optique'],
-            ['code_module' => 'INFO201', 'nom_module' => 'Structures de Données', 'credits' => 5, 'description' => 'Listes, arbres, graphes et algorithmes'],
-            ['code_module' => 'ELEC101', 'nom_module' => 'Électronique Fondamentale', 'credits' => 4, 'description' => 'Circuits électriques et composants électroniques'],
-            ['code_module' => 'LANG201', 'nom_module' => 'Anglais II', 'credits' => 2, 'description' => 'Anglais technique avancé'],
+            // Semestre 2 - Cycle Préparatoire
+            ['code_module' => 'ANL2', 'nom_module' => 'Analyse 2', 'credits' => 1, 'description' => 'Séries, intégrales multiples et équations différentielles'],
+            ['code_module' => 'ALG2', 'nom_module' => 'Algèbre 2', 'credits' => 1, 'description' => 'Algèbre linéaire avancée et diagonalisation'],
+            ['code_module' => 'PHY2', 'nom_module' => 'Physique 2', 'credits' => 1, 'description' => 'Électromagnétisme et optique'],
+            ['code_module' => 'CHIM', 'nom_module' => 'Chimie', 'credits' => 1, 'description' => 'Chimie générale et organique'],
+            ['code_module' => 'MAO', 'nom_module' => 'Mathématique assistés par Ordinateur', 'credits' => 1, 'description' => 'Calcul numérique et outils informatiques'],
+            ['code_module' => 'LC2', 'nom_module' => 'Language et Communication 2', 'credits' => 1, 'description' => 'Communication professionnelle et rédaction'],
 
-            // Modules Génie Informatique
-            ['code_module' => 'GI301', 'nom_module' => 'Programmation Orientée Objet', 'credits' => 5, 'description' => 'Concepts POO et programmation Java'],
-            ['code_module' => 'GI302', 'nom_module' => 'Bases de Données', 'credits' => 5, 'description' => 'Modélisation et SQL'],
-            ['code_module' => 'GI303', 'nom_module' => 'Systèmes d\'Exploitation', 'credits' => 4, 'description' => 'Architecture et gestion des ressources'],
-            ['code_module' => 'GI304', 'nom_module' => 'Réseaux Informatiques', 'credits' => 4, 'description' => 'Protocoles TCP/IP et architecture réseau'],
-            ['code_module' => 'GI305', 'nom_module' => 'Génie Logiciel', 'credits' => 4, 'description' => 'Méthodes de développement et UML'],
-            ['code_module' => 'GI306', 'nom_module' => 'Architecture des Ordinateurs', 'credits' => 4, 'description' => 'Organisation et fonctionnement des processeurs'],
+            // Semestre 3 - Cycle Préparatoire
+            ['code_module' => 'ALG3', 'nom_module' => 'Algèbre 3', 'credits' => 1, 'description' => 'Structures algébriques et applications'],
+            ['code_module' => 'ANL3', 'nom_module' => 'Analyse 3', 'credits' => 1, 'description' => 'Analyse complexe et transformées'],
+            ['code_module' => 'PHY3', 'nom_module' => 'Physique 3', 'credits' => 1, 'description' => 'Thermodynamique et physique statistique'],
+            ['code_module' => 'MECA3', 'nom_module' => 'Mécanique 3', 'credits' => 1, 'description' => 'Mécanique des fluides et résistance des matériaux'],
+            ['code_module' => 'INFO2', 'nom_module' => 'Informatique 2', 'credits' => 1, 'description' => 'Programmation orientée objet et structures de données'],
+            ['code_module' => 'LC3', 'nom_module' => 'Language et Communication 3', 'credits' => 1, 'description' => 'Communication interculturelle et anglais technique'],
 
-            ['code_module' => 'GI401', 'nom_module' => 'Développement Web', 'credits' => 5, 'description' => 'HTML, CSS, JavaScript et frameworks modernes'],
-            ['code_module' => 'GI402', 'nom_module' => 'Intelligence Artificielle', 'credits' => 5, 'description' => 'Algorithmes d\'IA et apprentissage automatique'],
-            ['code_module' => 'GI403', 'nom_module' => 'Sécurité Informatique', 'credits' => 4, 'description' => 'Cryptographie et sécurité des systèmes'],
-            ['code_module' => 'GI404', 'nom_module' => 'Systèmes Distribués', 'credits' => 4, 'description' => 'Architecture et programmation distribuée'],
-            ['code_module' => 'GI405', 'nom_module' => 'Gestion de Projet', 'credits' => 3, 'description' => 'Méthodologies agiles et gestion d\'équipe'],
-            ['code_module' => 'GI406', 'nom_module' => 'Analyse de Données', 'credits' => 4, 'description' => 'Big Data et visualisation'],
+            // Semestre 4 - Cycle Préparatoire
+            ['code_module' => 'ANL4', 'nom_module' => 'Analyse 4', 'credits' => 1, 'description' => 'Analyse fonctionnelle et applications'],
+            ['code_module' => 'MAPP', 'nom_module' => 'Mathématiques appliquées', 'credits' => 1, 'description' => 'Probabilités, statistiques et optimisation'],
+            ['code_module' => 'PHY4', 'nom_module' => 'Physique 4', 'credits' => 1, 'description' => 'Physique quantique et physique moderne'],
+            ['code_module' => 'ELEC', 'nom_module' => 'Électronique', 'credits' => 1, 'description' => 'Circuits électroniques et systèmes numériques'],
+            ['code_module' => 'MGMT', 'nom_module' => 'Management', 'credits' => 1, 'description' => 'Gestion de projet et management des organisations'],
+            ['code_module' => 'LC4', 'nom_module' => 'Language et Communication 4', 'credits' => 1, 'description' => 'Présentation professionnelle et communication d\'entreprise'],
 
-            ['code_module' => 'GI501', 'nom_module' => 'Cloud Computing', 'credits' => 4, 'description' => 'Services cloud et déploiement'],
-            ['code_module' => 'GI502', 'nom_module' => 'Développement Mobile', 'credits' => 5, 'description' => 'Applications iOS et Android'],
-            ['code_module' => 'GI503', 'nom_module' => 'Blockchain et Cryptomonnaies', 'credits' => 3, 'description' => 'Technologies blockchain et applications'],
-            ['code_module' => 'GI504', 'nom_module' => 'DevOps', 'credits' => 4, 'description' => 'CI/CD et automatisation'],
-            ['code_module' => 'GI505', 'nom_module' => 'Projet de Fin d\'Études', 'credits' => 10, 'description' => 'Projet professionnel de synthèse'],
+            // Semestre 5 - Génie Informatique
+            ['code_module' => 'TGRO', 'nom_module' => 'Théorie des Graphes et Recherche Opérationnel', 'credits' => 1, 'description' => 'Théorie des graphes, optimisation et recherche opérationnelle'],
+            ['code_module' => 'ARCHI', 'nom_module' => 'Architecture des Ordinateurs & Assembleur', 'credits' => 1, 'description' => 'Architecture matérielle et programmation assembleur'],
+            ['code_module' => 'BDR', 'nom_module' => 'Base des Donnees Relationnelles', 'credits' => 1, 'description' => 'Conception et gestion de bases de données relationnelles'],
+            ['code_module' => 'RESX1', 'nom_module' => 'Réseaux Informatiques', 'credits' => 1, 'description' => 'Fondamentaux des réseaux et protocoles TCP/IP'],
+            ['code_module' => 'SDC', 'nom_module' => 'Structure de Données en C', 'credits' => 1, 'description' => 'Structures de données avancées et algorithmes en C'],
+            ['code_module' => 'LE1', 'nom_module' => 'Langues étrangères 1', 'credits' => 1, 'description' => 'Anglais technique et communication professionnelle'],
 
-            // Modules Génie Électrique
-            ['code_module' => 'GE301', 'nom_module' => 'Électronique Analogique', 'credits' => 5, 'description' => 'Amplificateurs et circuits analogiques'],
-            ['code_module' => 'GE302', 'nom_module' => 'Électronique Numérique', 'credits' => 5, 'description' => 'Circuits logiques et microcontrôleurs'],
-            ['code_module' => 'GE303', 'nom_module' => 'Traitement du Signal', 'credits' => 4, 'description' => 'Analyse et traitement des signaux'],
-            ['code_module' => 'GE304', 'nom_module' => 'Automatique', 'credits' => 4, 'description' => 'Systèmes asservis et régulation'],
-            ['code_module' => 'GE305', 'nom_module' => 'Machines Électriques', 'credits' => 5, 'description' => 'Moteurs et générateurs électriques'],
+            // Semestre 6 - Génie Informatique
+            ['code_module' => 'DSKL', 'nom_module' => 'Digital Skills', 'credits' => 1, 'description' => 'Compétences numériques et outils digitaux'],
+            ['code_module' => 'SYSEXP', 'nom_module' => 'Systèmes d\'Exploitation et Linux', 'credits' => 1, 'description' => 'Administration système et commandes Linux'],
+            ['code_module' => 'MOO', 'nom_module' => 'Modelisation Orientée Objet', 'credits' => 1, 'description' => 'UML et conception orientée objet'],
+            ['code_module' => 'TLC', 'nom_module' => 'Théories des Langages et Compilation', 'credits' => 1, 'description' => 'Théorie des langages formels et compilation'],
+            ['code_module' => 'DEVWEB', 'nom_module' => 'Développement Web', 'credits' => 1, 'description' => 'HTML, CSS, JavaScript et développement web frontend'],
+            ['code_module' => 'POOJAVA', 'nom_module' => 'Programmation Orientée Objet Java', 'credits' => 1, 'description' => 'POO avancée avec Java'],
+            ['code_module' => 'LE2', 'nom_module' => 'Langues étrangères 2', 'credits' => 1, 'description' => 'Anglais professionnel et communication interculturelle'],
+            ['code_module' => 'CASS', 'nom_module' => 'Culture & Arts & Sport Skills', 'credits' => 1, 'description' => 'Développement personnel et compétences culturelles'],
 
-            // Modules Génie Mécanique
-            ['code_module' => 'GM301', 'nom_module' => 'Mécanique des Solides', 'credits' => 5, 'description' => 'Résistance des matériaux et contraintes'],
-            ['code_module' => 'GM302', 'nom_module' => 'Mécanique des Fluides', 'credits' => 4, 'description' => 'Dynamique des fluides et applications'],
-            ['code_module' => 'GM303', 'nom_module' => 'Thermodynamique Appliquée', 'credits' => 4, 'description' => 'Cycles thermodynamiques et machines'],
-            ['code_module' => 'GM304', 'nom_module' => 'CAO/DAO', 'credits' => 5, 'description' => 'Conception assistée par ordinateur'],
-            ['code_module' => 'GM305', 'nom_module' => 'Fabrication Mécanique', 'credits' => 4, 'description' => 'Procédés d\'usinage et fabrication'],
+            // Semestre 7 - Génie Informatique
+            ['code_module' => 'ABDR', 'nom_module' => 'Administration des Bases de Donnees Relationnelles', 'credits' => 1, 'description' => 'Administration avancée de SGBD et optimisation'],
+            ['code_module' => 'DEVWEBA', 'nom_module' => 'Developpement Web Avance', 'credits' => 1, 'description' => 'Frameworks web modernes et architectures avancées'],
+            ['code_module' => 'RESXA', 'nom_module' => 'Reseaux Informatiques Avances', 'credits' => 1, 'description' => 'Réseaux avancés, sécurité et administration'],
+            ['code_module' => 'MGL', 'nom_module' => 'Méthodologies et Génie Logiciel', 'credits' => 1, 'description' => 'Méthodes agiles, SCRUM et gestion de projets logiciels'],
+            ['code_module' => 'DOTNET', 'nom_module' => 'Technologie DotNet', 'credits' => 1, 'description' => 'Développement avec .NET Framework et C#'],
+            ['code_module' => 'LE3', 'nom_module' => 'Langues etrangères 3', 'credits' => 1, 'description' => 'Anglais des affaires et rédaction technique'],
+            ['code_module' => 'PI', 'nom_module' => 'Proprieté Intellectuelle', 'credits' => 1, 'description' => 'Droit de la propriété intellectuelle et brevets'],
 
-            // Modules Génie Civil
-            ['code_module' => 'GC301', 'nom_module' => 'Résistance des Matériaux', 'credits' => 5, 'description' => 'Calcul des structures et contraintes'],
-            ['code_module' => 'GC302', 'nom_module' => 'Béton Armé', 'credits' => 5, 'description' => 'Conception et calcul des structures en béton'],
-            ['code_module' => 'GC303', 'nom_module' => 'Mécanique des Sols', 'credits' => 4, 'description' => 'Géotechnique et fondations'],
-            ['code_module' => 'GC304', 'nom_module' => 'Topographie', 'credits' => 4, 'description' => 'Levés topographiques et cartographie'],
-            ['code_module' => 'GC305', 'nom_module' => 'Hydraulique', 'credits' => 4, 'description' => 'Écoulement et réseaux hydrauliques'],
+            // Semestre 8 - Génie Informatique
+            ['code_module' => 'ML', 'nom_module' => 'Machine Learning', 'credits' => 1, 'description' => 'Apprentissage automatique et algorithmes de ML'],
+            ['code_module' => 'ASSS', 'nom_module' => 'Administration Systèmes, Services et Sécurité', 'credits' => 1, 'description' => 'Administration système avancée et cybersécurité'],
+            ['code_module' => 'RESX2', 'nom_module' => 'Réseaux', 'credits' => 1, 'description' => 'Architecture réseau et technologies émergentes'],
+            ['code_module' => 'JEE', 'nom_module' => 'Java Entreprise Edition', 'credits' => 1, 'description' => 'Développement d\'applications d\'entreprise avec JEE'],
+            ['code_module' => 'MSDM', 'nom_module' => 'Microservices et Developpement Mobile', 'credits' => 1, 'description' => 'Architecture microservices et applications mobiles'],
+            ['code_module' => 'LE4', 'nom_module' => 'Langues étrangères 4', 'credits' => 1, 'description' => 'Communication professionnelle avancée en anglais'],
+            ['code_module' => 'GPE', 'nom_module' => 'Gestion de projet et entreprise', 'credits' => 1, 'description' => 'Management de projet et entrepreneuriat'],
 
-            // Modules Big Data et IA (BDIA)
-            ['code_module' => 'BDIA301', 'nom_module' => 'Fondements du Big Data', 'credits' => 5, 'description' => 'Introduction aux technologies Big Data et écosystème Hadoop'],
-            ['code_module' => 'BDIA302', 'nom_module' => 'Machine Learning', 'credits' => 5, 'description' => 'Algorithmes d\'apprentissage supervisé et non supervisé'],
-            ['code_module' => 'BDIA303', 'nom_module' => 'Deep Learning', 'credits' => 5, 'description' => 'Réseaux de neurones profonds et CNN'],
-            ['code_module' => 'BDIA304', 'nom_module' => 'Data Mining', 'credits' => 4, 'description' => 'Extraction de connaissances et patterns'],
-            ['code_module' => 'BDIA305', 'nom_module' => 'Traitement du Langage Naturel', 'credits' => 4, 'description' => 'NLP et analyse de texte'],
-            ['code_module' => 'BDIA306', 'nom_module' => 'Visualisation de Données', 'credits' => 3, 'description' => 'Techniques de visualisation et storytelling'],
+            // Semestre 9 - Génie Informatique
+            ['code_module' => 'FTW', 'nom_module' => 'Frameworks Technologie Web', 'credits' => 1, 'description' => 'Frameworks web modernes (React, Angular, Vue.js)'],
+            ['code_module' => 'BDA', 'nom_module' => 'Big Data & Analytics', 'credits' => 1, 'description' => 'Technologies Big Data et analyse de données massives'],
+            ['code_module' => 'ERP', 'nom_module' => 'Systèmes de Planification des Ressources d\'Entreprise (ERP)', 'credits' => 1, 'description' => 'Systèmes ERP et gestion intégrée'],
+            ['code_module' => 'USI', 'nom_module' => 'Urbanisme des Systemes d\'Information', 'credits' => 1, 'description' => 'Architecture et urbanisation des SI'],
+            ['code_module' => 'DL', 'nom_module' => 'Deep Learning', 'credits' => 1, 'description' => 'Réseaux de neurones profonds et apprentissage profond'],
+            ['code_module' => 'LE5', 'nom_module' => 'Langues étrangères 5', 'credits' => 1, 'description' => 'Anglais des affaires et négociation'],
+            ['code_module' => 'EMPSKL', 'nom_module' => 'Employment skills', 'credits' => 1, 'description' => 'Compétences professionnelles et employabilité'],
 
-            ['code_module' => 'BDIA401', 'nom_module' => 'Big Data Analytics', 'credits' => 5, 'description' => 'Spark, Kafka et traitement en temps réel'],
-            ['code_module' => 'BDIA402', 'nom_module' => 'IA Avancée', 'credits' => 5, 'description' => 'Reinforcement Learning et IA générative'],
-            ['code_module' => 'BDIA403', 'nom_module' => 'Computer Vision', 'credits' => 4, 'description' => 'Traitement d\'images et reconnaissance'],
-            ['code_module' => 'BDIA404', 'nom_module' => 'MLOps', 'credits' => 4, 'description' => 'Déploiement et monitoring de modèles ML'],
-            ['code_module' => 'BDIA405', 'nom_module' => 'Éthique et IA', 'credits' => 3, 'description' => 'Aspects éthiques et responsabilité en IA'],
-
-            // Modules Génie Système Embarqué et Cyber Security (GSECS)
-            ['code_module' => 'GSECS301', 'nom_module' => 'Systèmes Embarqués', 'credits' => 5, 'description' => 'Architecture et programmation des systèmes embarqués'],
-            ['code_module' => 'GSECS302', 'nom_module' => 'Microcontrôleurs et IoT', 'credits' => 5, 'description' => 'Arduino, ESP32 et Internet des Objets'],
-            ['code_module' => 'GSECS303', 'nom_module' => 'Sécurité des Systèmes', 'credits' => 5, 'description' => 'Sécurité des systèmes d\'exploitation et réseaux'],
-            ['code_module' => 'GSECS304', 'nom_module' => 'Cryptographie', 'credits' => 4, 'description' => 'Algorithmes cryptographiques et PKI'],
-            ['code_module' => 'GSECS305', 'nom_module' => 'RTOS', 'credits' => 4, 'description' => 'Systèmes d\'exploitation temps réel'],
-
-            ['code_module' => 'GSECS401', 'nom_module' => 'Cybersécurité Avancée', 'credits' => 5, 'description' => 'Ethical hacking et tests de pénétration'],
-            ['code_module' => 'GSECS402', 'nom_module' => 'Sécurité IoT', 'credits' => 4, 'description' => 'Sécurisation des objets connectés'],
-            ['code_module' => 'GSECS403', 'nom_module' => 'Forensique Numérique', 'credits' => 4, 'description' => 'Analyse et investigation numérique'],
-            ['code_module' => 'GSECS404', 'nom_module' => 'Systèmes Critiques', 'credits' => 4, 'description' => 'Conception de systèmes à haute fiabilité'],
-            ['code_module' => 'GSECS405', 'nom_module' => 'Blockchain et Sécurité', 'credits' => 3, 'description' => 'Applications blockchain en cybersécurité'],
-
-            // Modules Supply Chain Management (SCM)
-            ['code_module' => 'SCM301', 'nom_module' => 'Gestion de la Chaîne Logistique', 'credits' => 5, 'description' => 'Principes et stratégies SCM'],
-            ['code_module' => 'SCM302', 'nom_module' => 'Logistique et Transport', 'credits' => 5, 'description' => 'Gestion des flux et optimisation'],
-            ['code_module' => 'SCM303', 'nom_module' => 'Gestion des Stocks', 'credits' => 4, 'description' => 'Méthodes de gestion et prévision'],
-            ['code_module' => 'SCM304', 'nom_module' => 'Achats et Approvisionnement', 'credits' => 4, 'description' => 'Stratégies d\'achat et négociation'],
-            ['code_module' => 'SCM305', 'nom_module' => 'ERP et Systèmes d\'Information', 'credits' => 4, 'description' => 'SAP, Oracle et gestion intégrée'],
-
-            ['code_module' => 'SCM401', 'nom_module' => 'Supply Chain Analytics', 'credits' => 5, 'description' => 'Analyse de données et aide à la décision'],
-            ['code_module' => 'SCM402', 'nom_module' => 'Lean et Six Sigma', 'credits' => 4, 'description' => 'Amélioration continue et qualité'],
-            ['code_module' => 'SCM403', 'nom_module' => 'E-Logistique', 'credits' => 4, 'description' => 'Commerce électronique et logistique digitale'],
-            ['code_module' => 'SCM404', 'nom_module' => 'Supply Chain Durable', 'credits' => 3, 'description' => 'Développement durable et RSE'],
-            ['code_module' => 'SCM405', 'nom_module' => 'Gestion de Projet SCM', 'credits' => 4, 'description' => 'Pilotage de projets logistiques'],
         ];
 
         foreach ($modules as $module) {
