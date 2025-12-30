@@ -102,7 +102,17 @@ export default function Suivi() {
         const transformedRequests: DocumentRequest[] = filteredRequests.map((req: any) => ({
           id: req.id.toString(),
           requestNumber: req.num_demande,
-          studentId: req.etudiant.apogee,
+          student: req.etudiant ? {
+             id: req.etudiant.id.toString(),
+             email: req.etudiant.email,
+             apogee: req.etudiant.apogee,
+             cin: req.etudiant.cin,
+             nom: req.etudiant.nom,
+             prenom: req.etudiant.prenom,
+             filiere: req.etudiant.filiere || "Non spécifié",
+             niveau: req.etudiant.niveau || "Non spécifié",
+          } : undefined,
+          studentId: req.etudiant ? req.etudiant.apogee : '',
           documentType: req.type_document as any,
           status: req.status as any,
           createdAt: new Date(req.date_demande.split('/').reverse().join('-')),
@@ -372,13 +382,13 @@ export default function Suivi() {
           {selectedTranscript && (
             <ReleveNotesTemplate
               data={{
-                etudiant: {
-                  nom: selectedTranscript.etudiant?.nom || "Nom",
-                  prenom: selectedTranscript.etudiant?.prenom || "Prenom",
+                student: {
+                  nom: selectedTranscript.student?.nom || "Nom",
+                  prenom: selectedTranscript.student?.prenom || "Prenom",
                   apogee: selectedTranscript.studentId,
-                  cin: selectedTranscript.etudiant?.cin || "",
-                  date_naissance: selectedTranscript.etudiant?.date_naissance,
-                  lieu_naissance: selectedTranscript.etudiant?.lieu_naissance
+                  cin: selectedTranscript.student?.cin || "",
+                  date_naissance: selectedTranscript.student?.date_naissance,
+                  lieu_naissance: selectedTranscript.student?.lieu_naissance
                 },
                 details: selectedTranscript.details
               }}

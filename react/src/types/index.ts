@@ -39,7 +39,7 @@ export interface DocumentRequest {
   requestNumber: string;
   studentId: string;
   // mapped from backend 'etudiant' object
-  etudiant?: Student;
+  student?: Student;
   documentType: DocumentType;
   status: RequestStatus;
   createdAt: Date;

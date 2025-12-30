@@ -15,15 +15,15 @@ export default function ReleveNotesTemplate({ data, onClose }: ReleveNotesProps)
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
-        documentTitle: `Releve de notes - ${data.etudiant.nom} ${data.etudiant.prenom}`,
+        documentTitle: `Releve de notes - ${data.student.nom} ${data.student.prenom}`,
     });
 
-    const { etudiant, details } = data;
+    const { student, details } = data;
     const currentDate = format(new Date(), "d MMMM yyyy", { locale: fr });
 
     // Format birth date in French
-    const birthDate = etudiant.date_naissance
-        ? format(new Date(etudiant.date_naissance), "d MMMM yyyy", { locale: fr })
+    const birthDate = student.date_naissance
+        ? format(new Date(student.date_naissance), "d MMMM yyyy", { locale: fr })
         : "Non renseigné";
 
     return (
@@ -80,19 +80,19 @@ export default function ReleveNotesTemplate({ data, onClose }: ReleveNotesProps)
 
                         {/* Student Info */}
                         <div className="mb-6 text-xs border p-4">
-                            <div className="font-bold mb-3 text-sm uppercase">{etudiant.nom} {etudiant.prenom}</div>
+                            <div className="font-bold mb-3 text-sm uppercase">{student.nom} {student.prenom}</div>
                             <div className="grid grid-cols-2 gap-y-2">
                                 <div>
-                                    <span className="font-bold">N° Etudiant:</span> {etudiant.apogee}
+                                    <span className="font-bold">N° Etudiant:</span> {student.apogee}
                                 </div>
                                 <div>
-                                    <span className="font-bold">CNE / CIM:</span> {etudiant.cin}
+                                    <span className="font-bold">CNE / CIM:</span> {student.cin}
                                 </div>
                                 <div>
                                     <span className="font-bold">Né le :</span> {birthDate}
                                 </div>
                                 <div>
-                                    <span className="font-bold">à :</span> {etudiant.lieu_naissance || "Non renseigné"}
+                                    <span className="font-bold">à :</span> {student.lieu_naissance || "Non renseigné"}
                                 </div>
                                 <div className="col-span-2 mt-2 pt-2 border-t">
                                     <span className="font-bold">Inscrit en : </span>
