@@ -10,6 +10,7 @@ Route::post('/demandes', [DemandeController::class, 'store']);
 Route::post('/reclamations', [DemandeController::class, 'createReclamation']);
 Route::post('/suivi-demandes', [DemandeController::class, 'suiviDemandes']);
 Route::post('/validate-student', [DemandeController::class, 'validateStudent']);
+Route::get('/professeurs', [DemandeController::class, 'getProfesseurs']);
 Route::get('/demandes/download-pdf/{num_demande}', [DemandeController::class, 'downloadPdf']);
 
 // Routes d'authentification admin
