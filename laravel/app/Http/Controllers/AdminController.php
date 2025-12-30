@@ -283,17 +283,16 @@ class AdminController extends Controller
      */
     public function validerDemande(Request $request, $id)
     {
-        try {
-            $demande = Demande::with([
-                'etudiant',
-                'inscription.filiere',
-                'inscription.niveau',
-                'inscription.anneeUniversitaire',
-                'attestationScolaire',
-                'attestationReussite.decisionAnnee',
-                'releveNotes.decisionAnnee',
-                'conventionStage'
-            ])->findOrFail($id);
+        $demande = Demande::with([
+            'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee',
+            'releveNotes.decisionAnnee',
+            'conventionStage'
+        ])->findOrFail($id);
 
         \DB::beginTransaction();
 
