@@ -11,6 +11,8 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminDemandes from "./pages/admin/Demandes";
 import AdminHistorique from "./pages/admin/Historique";
 import AdminReclamations from "./pages/admin/Reclamations";
+import ClaimsDashboard from "./pages/admin/ClaimsDashboard";
+import StageConventionTemplate from "./components/StageConventionTemplate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +33,8 @@ const App = () => (
           <Route path="/admin/demandes" element={<AdminDemandes />} />
           <Route path="/admin/historique" element={<AdminHistorique />} />
           <Route path="/admin/reclamations" element={<AdminReclamations />} />
+          <Route path="/admin/claims-dashboard" element={<ClaimsDashboard />} />
+          <Route path="/template" element={<StageConventionTemplate />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

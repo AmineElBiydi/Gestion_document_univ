@@ -30,19 +30,37 @@ class DemandeController extends Controller
      */
     public function validateStudent(Request $request)
     {
+        // Accept nullable fields to handle empty strings from frontend
         $validated = $request->validate([
-            'email' => 'required|email',
-            'apogee' => 'required|string',
-            'cin' => 'required|string',
+            'email' => 'nullable|string',
+            'apogee' => 'nullable|string',
+            'cin' => 'nullable|string',
         ]);
 
-        // Step 1: Pattern/Format validation
-        $emailPatternValid = filter_var($validated['email'], FILTER_VALIDATE_EMAIL) !== false;
-        $apogeePatternValid = preg_match('/^\d{6,10}$/', $validated['apogee']);
-        $cinPatternValid = preg_match('/^[A-Z]{1,2}\d{4,8}$/i', $validated['cin']);
+        // Get values, treating empty strings as null
+        $email = !empty($validated['email']) ? $validated['email'] : null;
+        $apogee = !empty($validated['apogee']) ? $validated['apogee'] : null;
+        $cin = !empty($validated['cin']) ? $validated['cin'] : null;
 
-        // If patterns are invalid, return early
-        if (!$emailPatternValid || !$apogeePatternValid || !$cinPatternValid) {
+        // If all fields are empty, return early with all false
+        if (!$email && !$apogee && !$cin) {
+            return response()->json([
+                'email_valid' => false,
+                'apogee_valid' => false,
+                'cin_valid' => false,
+                'student_valid' => false,
+                'all_valid' => false,
+                'error_type' => 'empty'
+            ]);
+        }
+
+        // Step 1: Pattern/Format validation (only for filled fields)
+        $emailPatternValid = $email ? (filter_var($email, FILTER_VALIDATE_EMAIL) !== false) : false;
+        $apogeePatternValid = $apogee ? (bool)preg_match('/^\d{6,10}$/', $apogee) : false;
+        $cinPatternValid = $cin ? (bool)preg_match('/^[A-Z]{1,2}\d{4,8}$/i', $cin) : false;
+
+        // If any filled field has invalid pattern, return early
+        if (($email && !$emailPatternValid) || ($apogee && !$apogeePatternValid) || ($cin && !$cinPatternValid)) {
             return response()->json([
                 'email_valid' => $emailPatternValid,
                 'apogee_valid' => $apogeePatternValid,
@@ -53,13 +71,13 @@ class DemandeController extends Controller
             ]);
         }
 
-        // Step 2: Database existence check
-        $emailExists = Etudiant::where('email', $validated['email'])->exists();
-        $apogeeExists = Etudiant::where('apogee', $validated['apogee'])->exists();
-        $cinExists = Etudiant::where('cin', $validated['cin'])->exists();
+        // Step 2: Database existence check (only for fields with valid patterns)
+        $emailExists = $emailPatternValid ? Etudiant::where('email', $email)->exists() : false;
+        $apogeeExists = $apogeePatternValid ? Etudiant::where('apogee', $apogee)->exists() : false;
+        $cinExists = $cinPatternValid ? Etudiant::where('cin', $cin)->exists() : false;
 
-        // If any field doesn't exist in database, return early
-        if (!$emailExists || !$apogeeExists || !$cinExists) {
+        // If any validated field doesn't exist in database, return early
+        if (($emailPatternValid && !$emailExists) || ($apogeePatternValid && !$apogeeExists) || ($cinPatternValid && !$cinExists)) {
             return response()->json([
                 'email_valid' => $emailExists,
                 'apogee_valid' => $apogeeExists,
@@ -70,13 +88,29 @@ class DemandeController extends Controller
             ]);
         }
 
-        // Step 3: Relationship check - ensure all three fields belong to same student
-        $student = Etudiant::where('email', $validated['email'])
-            ->where('apogee', $validated['apogee'])
-            ->where('cin', $validated['cin'])
-            ->first();
-
-        $studentExists = $student !== null;
+        // Step 3: Relationship check - only if all three fields are filled and valid
+        $studentExists = false;
+        $anneesUniversitaires = [];
+        
+        if ($emailPatternValid && $apogeePatternValid && $cinPatternValid) {
+            $student = Etudiant::where('email', $email)
+                ->where('apogee', $apogee)
+                ->where('cin', $cin)
+                ->first();
+            $studentExists = $student !== null;
+            
+            // Si l'étudiant existe, récupérer ses années universitaires
+            if ($studentExists) {
+                $anneesUniversitaires = $student->inscriptions()
+                    ->with('anneeUniversitaire')
+                    ->get()
+                    ->pluck('anneeUniversitaire.libelle')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->toArray();
+            }
+        }
 
         return response()->json([
             'email_valid' => $emailExists,
@@ -84,7 +118,8 @@ class DemandeController extends Controller
             'cin_valid' => $cinExists,
             'student_valid' => $studentExists,
             'all_valid' => $studentExists,
-            'error_type' => $studentExists ? 'none' : 'relationship'
+            'error_type' => $studentExists ? 'none' : 'relationship',
+            'annees_universitaires' => $anneesUniversitaires
         ]);
     }
 
@@ -122,9 +157,19 @@ class DemandeController extends Controller
             // Générer un numéro de demande unique
             $numDemande = 'DEM-' . strtoupper(Str::random(8)) . '-' . date('Ymd');
 
-            // Optionally get inscription_id if provided
+            // Get inscription_id - either from request or find the most recent one
             $inscriptionId = $request->input('inscription_id', null);
-            if ($inscriptionId) {
+            
+            if (!$inscriptionId) {
+                // Automatically find the student's most recent inscription
+                $inscription = Inscription::where('etudiant_id', $etudiant->id)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                
+                if ($inscription) {
+                    $inscriptionId = $inscription->id;
+                }
+            } else {
                 // Verify the inscription belongs to this student
                 $inscription = Inscription::where('id', $inscriptionId)
                     ->where('etudiant_id', $etudiant->id)
@@ -193,42 +238,46 @@ class DemandeController extends Controller
                 break;
 
             case 'attestation_reussite':
-                // Requires decision_annee_id
-                $validated = $request->validate([
-                    'decision_annee_id' => 'required|exists:decisions_annee,id',
-                ]);
+                // Accept text values from frontend, try to find matching decision_annee_id
+                // If inscription exists, link to decision. Otherwise create without decision.
+                $decisionAnneeId = null;
                 
-                // Verify the decision_annee belongs to the student's inscription if provided
                 if ($demande->inscription_id) {
-                    $decisionAnnee = DecisionAnnee::findOrFail($validated['decision_annee_id']);
-                    if ($decisionAnnee->inscription_id !== $demande->inscription_id) {
-                        throw new \Exception('La décision d\'année ne correspond pas à l\'inscription de la demande.');
+                    // Try to find a decision for this inscription
+                    $decisionAnnee = DecisionAnnee::where('inscription_id', $demande->inscription_id)
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    
+                    if ($decisionAnnee) {
+                        $decisionAnneeId = $decisionAnnee->id;
                     }
                 }
-                
+
                 AttestationReussite::create([
                     'demande_id' => $demande->id,
-                    'decision_annee_id' => $validated['decision_annee_id'],
+                    'decision_annee_id' => $decisionAnneeId,
                 ]);
                 break;
 
             case 'releve_notes':
-                // Requires decision_annee_id
-                $validated = $request->validate([
-                    'decision_annee_id' => 'required|exists:decisions_annee,id',
-                ]);
+                // Accept text values from frontend, try to find matching decision_annee_id
+                // If inscription exists, link to decision. Otherwise create without decision.
+                $decisionAnneeId = null;
                 
-                // Verify the decision_annee belongs to the student's inscription if provided
                 if ($demande->inscription_id) {
-                    $decisionAnnee = DecisionAnnee::findOrFail($validated['decision_annee_id']);
-                    if ($decisionAnnee->inscription_id !== $demande->inscription_id) {
-                        throw new \Exception('La décision d\'année ne correspond pas à l\'inscription de la demande.');
+                    // Try to find a decision for this inscription
+                    $decisionAnnee = DecisionAnnee::where('inscription_id', $demande->inscription_id)
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    
+                    if ($decisionAnnee) {
+                        $decisionAnneeId = $decisionAnnee->id;
                     }
                 }
-                
+
                 ReleveNotes::create([
                     'demande_id' => $demande->id,
-                    'decision_annee_id' => $validated['decision_annee_id'],
+                    'decision_annee_id' => $decisionAnneeId,
                 ]);
                 break;
 
@@ -426,11 +475,25 @@ class DemandeController extends Controller
                     if ($demande->releveNotes && $demande->releveNotes->decisionAnnee) {
                         $decision = $demande->releveNotes->decisionAnnee;
                         $inscription = $decision->inscription;
+                        
+                        // Get notes with modules
+                        $notes = $inscription->notes()->with('moduleNiveau.module')->get()->map(function($note) {
+                            return [
+                                'module' => $note->moduleNiveau->module->nom_module ?? 'Module inconnu',
+                                'note' => $note->note,
+                                'resultat' => $note->est_valide ? 'Validé' : 'Non Validé',
+                            ];
+                        });
+
                         $details = [
                             'annee_universitaire' => $inscription->anneeUniversitaire->libelle ?? null,
+                            'niveau' => $inscription->niveau->libelle ?? null,
+                            'filiere' => $inscription->filiere->nom_filiere ?? null,
                             'decision' => $decision->decision,
                             'moyenne' => $decision->moyenne_annuelle,
+                            'mention' => $decision->mention,
                             'session' => $decision->type_session,
+                            'resultats' => $notes
                         ];
                     }
                     break;
@@ -464,6 +527,9 @@ class DemandeController extends Controller
                     'prenom' => $etudiant->prenom,
                     'email' => $etudiant->email,
                     'apogee' => $etudiant->apogee,
+                    'cin' => $etudiant->cin,
+                    'date_naissance' => $etudiant->date_naissance, // formatted in frontend or keep as is
+                    'lieu_naissance' => $etudiant->lieu_naissance,
                 ]
             ];
         });
@@ -472,5 +538,64 @@ class DemandeController extends Controller
             'success' => true,
             'data' => $demandesTransformees
         ]);
+    }
+
+    /**
+     * Télécharger le PDF d'une demande validée
+     */
+    public function downloadPdf($num_demande)
+    {
+        $demande = Demande::where('num_demande', $num_demande)
+            ->where('status', 'validee')
+            ->first();
+
+        if (!$demande) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Demande non trouvée ou non validée.'
+            ], 404);
+        }
+
+        $pdfService = app(\App\Services\PdfService::class);
+        
+        try {
+            $pdfPath = null;
+            
+            switch ($demande->type_document) {
+                case 'releve_notes':
+                    $pdfPath = $pdfService->genererReleveNotes($demande);
+                    $filename = 'Releve_Notes.pdf';
+                    break;
+                case 'attestation_scolaire':
+                    $pdfPath = $pdfService->genererAttestationScolaire($demande);
+                    $filename = 'Attestation_Scolarite.pdf';
+                    break;
+                case 'attestation_reussite':
+                    $pdfPath = $pdfService->genererAttestationReussite($demande);
+                    $filename = 'Attestation_Reussite.pdf';
+                    break;
+                case 'convention_stage':
+                    $pdfPath = $pdfService->genererConventionStage($demande);
+                    $filename = 'Convention_Stage.pdf';
+                    break;
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Type de document non supporté.'
+                    ], 400);
+            }
+
+            return response()->download(
+                storage_path('app/' . $pdfPath),
+                $filename,
+                ['Content-Type' => 'application/pdf']
+            );
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la génération du PDF: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

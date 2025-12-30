@@ -73,8 +73,14 @@ export default function AdminDemandes() {
   const [selectedRequest, setSelectedRequest] = useState<DocumentRequest | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showRefuseDialog, setShowRefuseDialog] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [refusalReason, setRefusalReason] = useState("");
+
   const [customReason, setCustomReason] = useState("");
+  const [history, setHistory] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Load demandes from API
   useEffect(() => {
@@ -93,7 +99,7 @@ export default function AdminDemandes() {
       if (searchQuery) params.search = searchQuery;
 
       const response = await apiEndpoints.getDemandesAttente(params);
-      
+
       if (response.data.success) {
         // Transform backend data to frontend format
         const transformedData = response.data.data.map((item: any) => ({
@@ -117,7 +123,7 @@ export default function AdminDemandes() {
           details: getDocumentDetails(item),
           refusalReason: item.raison_refus,
         }));
-        
+
         setRequests(transformedData);
       }
     } catch (error: any) {
@@ -129,9 +135,23 @@ export default function AdminDemandes() {
     }
   };
 
+  const loadHistory = async (id: string) => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await apiEndpoints.getDemandeHistory(id);
+      if (response.data.success) {
+        setHistory(response.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to load history", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
   const getDocumentDetails = (item: any): Record<string, string> => {
     const details: Record<string, string> = {};
-    
+
     if (item.attestationScolaire) {
       Object.assign(details, item.attestationScolaire);
     }
@@ -144,7 +164,7 @@ export default function AdminDemandes() {
     if (item.conventionStage) {
       Object.assign(details, item.conventionStage);
     }
-    
+
     return details;
   };
 
@@ -157,10 +177,30 @@ export default function AdminDemandes() {
     return matchesSearch && matchesType;
   });
 
+  const handlePreviewPDF = async (request: DocumentRequest) => {
+    setSelectedRequest(request);
+    setIsLoadingPdf(true);
+    setShowPreviewDialog(true);
+
+    try {
+      const response = await apiEndpoints.previewPDF(request.id);
+
+      if (response.data.success) {
+        setPdfUrl(response.data.pdf_url);
+      }
+    } catch (error: any) {
+      toast.error("Erreur lors de la prévisualisation du PDF");
+      console.error("Preview PDF error:", error);
+      setShowPreviewDialog(false);
+    } finally {
+      setIsLoadingPdf(false);
+    }
+  };
+
   const handleValidate = async (request: DocumentRequest) => {
     try {
       const response = await apiEndpoints.validerDemande(request.id);
-      
+
       if (response.data.success) {
         setRequests(
           requests.map((r) =>
@@ -168,10 +208,21 @@ export default function AdminDemandes() {
           )
         );
         toast.success(`Demande ${request.requestNumber} validée`);
+        // Reload the list to remove validated request from pending list
+        loadDemandes();
       }
     } catch (error: any) {
       toast.error("Erreur lors de la validation");
     }
+  };
+
+  const handleValidateFromPreview = async () => {
+    if (!selectedRequest) return;
+
+    setShowPreviewDialog(false);
+    await handleValidate(selectedRequest);
+    setSelectedRequest(null);
+    setPdfUrl(null);
   };
 
   const handleRefuse = async () => {
@@ -181,10 +232,10 @@ export default function AdminDemandes() {
       toast.error("Veuillez sélectionner ou saisir un motif de refus");
       return;
     }
-    
+
     try {
       const response = await apiEndpoints.refuserDemande(selectedRequest.id, { raison: reason });
-      
+
       if (response.data.success) {
         setRequests(
           requests.map((r) =>
@@ -295,12 +346,22 @@ export default function AdminDemandes() {
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedRequest(request);
+                              // Load history when opening details
+                              loadHistory(request.id);
                               setShowViewDialog(true);
                             }}
                           >
                             <Eye className="mr-2 h-4 w-4" />
                             Voir détails
                           </DropdownMenuItem>
+                          {(request.status === "en_attente" || request.status === "en_cours") && (
+                            <DropdownMenuItem
+                              onClick={() => handlePreviewPDF(request)}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Prévisualiser PDF
+                            </DropdownMenuItem>
+                          )}
                           {(request.status === "en_attente" || request.status === "en_cours") && (
                             <>
                               <DropdownMenuSeparator />
@@ -396,6 +457,30 @@ export default function AdminDemandes() {
                   </div>
                 </div>
               )}
+
+              {/* History Section */}
+              <div className="rounded-lg bg-muted/50 p-4">
+                <h4 className="font-semibold mb-2">Historique des actions</h4>
+                {isLoadingHistory ? (
+                  <div className="text-center py-2 text-sm text-muted-foreground">Chargement...</div>
+                ) : history.length > 0 ? (
+                  <div className="space-y-3">
+                    {history.map((item: any, index: number) => (
+                      <div key={index} className="flex gap-3 text-sm border-l-2 border-primary/20 pl-3">
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{item.action}</p>
+                          {item.details && <p className="text-muted-foreground text-xs mt-0.5">{item.details}</p>}
+                        </div>
+                        <div className="text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(item.created_at).toLocaleString('fr-FR')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Aucun historique disponible</p>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -454,6 +539,64 @@ export default function AdminDemandes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+
+      {/* Preview PDF Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={(open) => {
+        setShowPreviewDialog(open);
+        if (!open) {
+          setPdfUrl(null);
+          setSelectedRequest(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Prévisualisation du PDF</DialogTitle>
+            <DialogDescription>
+              {selectedRequest?.requestNumber} - {selectedRequest && documentTypeLabels[selectedRequest.documentType]}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {isLoadingPdf ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Génération du PDF...</p>
+                </div>
+              </div>
+            ) : pdfUrl ? (
+              <iframe
+                src={pdfUrl}
+                className="w-full h-full border rounded"
+                title="PDF Preview"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">Impossible de charger le PDF</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPreviewDialog(false);
+                setPdfUrl(null);
+                setSelectedRequest(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleValidateFromPreview}
+              disabled={isLoadingPdf}
+              className="bg-success hover:bg-success/90"
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Valider et Envoyer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Layout >
   );
 }

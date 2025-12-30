@@ -10,6 +10,7 @@ Route::post('/demandes', [DemandeController::class, 'store']);
 Route::post('/reclamations', [DemandeController::class, 'createReclamation']);
 Route::post('/suivi-demandes', [DemandeController::class, 'suiviDemandes']);
 Route::post('/validate-student', [DemandeController::class, 'validateStudent']);
+Route::get('/demandes/download-pdf/{num_demande}', [DemandeController::class, 'downloadPdf']);
 
 // Routes d'authentification admin
 Route::post('/admin/login', [AdminController::class, 'login']);
@@ -29,6 +30,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Legacy routes (keep for backward compatibility)
     Route::get('/admin/demandes', [AdminController::class, 'getDemandes']);
     Route::get('/admin/demandes/{id}', [AdminController::class, 'getDemandeDetails']);
+    Route::get('/admin/demandes/{id}/preview', [AdminController::class, 'previewPDF']);
+    Route::get('/admin/demandes/{id}/history', [AdminController::class, 'getDemandeHistory']);
     Route::put('/admin/demandes/{id}/valider', [AdminController::class, 'validerDemande']);
     Route::put('/admin/demandes/{id}/refuser', [AdminController::class, 'refuserDemande']);
     

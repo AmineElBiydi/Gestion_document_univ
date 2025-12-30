@@ -6,20 +6,23 @@ use App\Models\Demande;
 use App\Models\Admin;
 use App\Models\Reclamation;
 use App\Models\Etudiant;
-use App\Mail\ReclamationReponse;
-use App\Mail\DemandeValidee;
 use Illuminate\Support\Facades\Mail;
 use App\Services\EmailService;
+use App\Services\PdfService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Mail\DemandeValidee;
+use App\Models\DemandeHistorique;
 
 class AdminController extends Controller
 {
     protected $emailService;
+    protected $pdfService;
 
-    public function __construct(EmailService $emailService)
+    public function __construct(EmailService $emailService, PdfService $pdfService)
     {
         $this->emailService = $emailService;
+        $this->pdfService = $pdfService;
     }
     /**
      * Authentification de l'administrateur
@@ -281,27 +284,129 @@ class AdminController extends Controller
      */
     public function validerDemande(Request $request, $id)
     {
-        $demande = Demande::findOrFail($id);
+        $demande = Demande::with([
+            'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee',
+            'releveNotes.decisionAnnee',
+            'conventionStage'
+        ])->findOrFail($id);
 
-        $demande->update([
-            'status' => 'validee',
-            'date_traitement' => now(),
-            'traite_par_admin_id' => auth()->id(),
-        ]);
+        \DB::beginTransaction();
 
-        // Send email notification to student
+        try {
+            // Update demande status
+            $demande->status = 'validee';
+            $demande->date_traitement = now();
+            $demande->traite_par_admin_id = auth()->id();
+            $demande->save();
+
+            // Generate PDF
+            $pdfPath = null;
+            try {
+                $pdfPath = $this->pdfService->generatePDF($demande);
+                $demande->fichier_genere_path = $pdfPath;
+                $demande->save();
+                
+                // Update attestation_scolaires table with generation timestamp
+                if ($demande->type_document === 'attestation_scolaire' && $demande->attestationScolaire) {
+                    $demande->attestationScolaire->update([
+                        'updated_at' => now()
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('PDF generation failed: ' . $e->getMessage());
+                \Log::error('Stack trace: ' . $e->getTraceAsString());
+                
+                // Still send email even if PDF generation fails
+            }
+
+            // Historique
+            DemandeHistorique::create([
+                'demande_id' => $demande->id,
+                'user_id' => auth()->id(),
+                'action' => 'validee',
+                'details' => 'Demande validée par l\'administrateur.',
+            ]);
+
+            \DB::commit();
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Error validating demande: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la validation: ' . $e->getMessage()
+            ], 500);
+        }
+
+        // Send email notification to student with PDF attachment
+        // Done after commit to avoid holding lock during email sending
         $etudiant = $demande->etudiant;
         $typeDocument = $demande->getTypeDocumentLabel();
         
-        Mail::to($etudiant->email)->send(
-            new DemandeValidee($demande, $etudiant, $typeDocument)
-        );
+        try {
+            Mail::to($etudiant->email)->send(
+                new DemandeValidee($demande, $etudiant, $typeDocument, $pdfPath)
+            );
+        } catch (\Exception $e) {
+            \Log::error('Email sending failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Demande validée avec succès.',
-            'data' => $demande->load('etudiant')
+            'data' => $demande->fresh()->load('etudiant'),
+            'pdf_path' => $pdfPath
         ]);
+    }
+
+    /**
+     * Preview PDF before validation
+     */
+    public function previewPDF($id)
+    {
+        $demande = Demande::with([
+            'etudiant',
+            'inscription.filiere',
+            'inscription.niveau',
+            'inscription.anneeUniversitaire',
+            'attestationScolaire',
+            'attestationReussite.decisionAnnee',
+            'releveNotes.decisionAnnee',
+            'conventionStage'
+        ])->findOrFail($id);
+        
+        if ($demande->status !== 'en_attente') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seules les demandes en attente peuvent être prévisualisées.'
+            ], 400);
+        }
+
+        try {
+            $pdfPath = $this->pdfService->generatePDF($demande);
+            
+            // Convert absolute path to relative URL
+            $relativePath = str_replace(storage_path('app/public/'), '', $pdfPath);
+            $pdfUrl = url('storage/' . $relativePath);
+            
+            return response()->json([
+                'success' => true,
+                'pdf_url' => $pdfUrl,
+                'pdf_path' => $pdfPath
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('PDF preview generation failed: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la génération du PDF: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -315,25 +420,39 @@ class AdminController extends Controller
 
         $demande = Demande::findOrFail($id);
 
-        $demande->update([
-            'status' => 'rejetee',
-            'raison_refus' => $request->raison,
-            'date_traitement' => now(),
-            'traite_par_admin_id' => auth()->id(),
+        $demande->status = 'rejetee';
+        $demande->raison_refus = $request->raison;
+        $demande->date_traitement = now();
+        $demande->traite_par_admin_id = auth()->id();
+        $demande->save();
+
+        // Historique
+        DemandeHistorique::create([
+            'demande_id' => $demande->id,
+            'user_id' => auth()->id(),
+            'action' => 'rejetee',
+            'details' => 'Motif: ' . $request->raison,
         ]);
 
         // Envoyer email de refus à l'étudiant
-        $this->emailService->envoyerRefusDemande($demande);
+        try {
+            $this->emailService->envoyerRefusDemande($demande);
+        } catch (\Exception $e) {
+            \Log::error('Email refus sending failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Demande refusée.',
+            'message' => 'Demande refusée avec succès.',
             'data' => $demande->load('etudiant')
         ]);
     }
 
     /**
      * Obtenir les détails d'une demande
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function getDemandeDetails($id)
     {
@@ -355,6 +474,21 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'data' => $demande
+        ]);
+    }
+
+    /**
+     * Obtenir l'historique des actions sur une demande
+     */
+    public function getDemandeHistory($id)
+    {
+        $historique = DemandeHistorique::where('demande_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $historique
         ]);
     }
 
@@ -426,19 +560,8 @@ class AdminController extends Controller
         ]);
 
         // Send email notification to student
-        $etudiant = $reclamation->etudiant;
-        $typeReclamation = $reclamation->type;
-        $adminNom = auth()->user()->nom . ' ' . auth()->user()->prenom;
-        
-        Mail::to($etudiant->email)->send(
-            new ReclamationReponse(
-                $reclamation,
-                $etudiant,
-                $typeReclamation,
-                $validated['reponse'],
-                $adminNom
-            )
-        );
+        $this->emailService->envoyerReponseReclamation($reclamation);
+        \Log::info('Email reclamation reponse sent: ' . $reclamation->id);
 
         return response()->json([
             'success' => true,
@@ -564,13 +687,16 @@ class AdminController extends Controller
             'traite_par_admin_id' => auth()->id(),
         ]);
 
-        // Send email notification to student
-        $etudiant = $demande->etudiant;
-        $typeDocument = $demande->getTypeDocumentLabel();
-        
-        Mail::to($etudiant->email)->send(
-            new DemandeValidee($demande, $etudiant, $typeDocument)
-        );
+        // Historique
+        DemandeHistorique::create([
+            'demande_id' => $demande->id,
+            'user_id' => auth()->id(),
+            'action' => 'inversee',
+            'details' => 'Statut inversé de Rejetée à Validée.',
+        ]);
+
+        // Send email notification to student via EmailService
+        $this->emailService->envoyerValidationDemande($demande);
 
         return response()->json([
             'success' => true,
