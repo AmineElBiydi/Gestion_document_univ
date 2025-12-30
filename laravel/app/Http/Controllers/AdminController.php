@@ -295,33 +295,47 @@ class AdminController extends Controller
             'conventionStage'
         ])->findOrFail($id);
 
-        // Update demande status
-        $demande->update([
-            'status' => 'validee',
-            'date_traitement' => now(),
-            'traite_par_admin_id' => auth()->id(),
-        ]);
+        \DB::beginTransaction();
 
-        // Generate PDF
-        $pdfPath = null;
         try {
-            $pdfPath = $this->pdfService->generatePDF($demande);
-            $demande->update(['fichier_genere_path' => $pdfPath]);
-            
-            // Update attestation_scolaires table with generation timestamp
-            if ($demande->type_document === 'attestation_scolaire' && $demande->attestationScolaire) {
-                $demande->attestationScolaire->update([
-                    'updated_at' => now()
-                ]);
+            // Update demande status
+            $demande->status = 'validee';
+            $demande->date_traitement = now();
+            $demande->traite_par_admin_id = auth()->id();
+            $demande->save();
+
+            // Generate PDF
+            $pdfPath = null;
+            try {
+                $pdfPath = $this->pdfService->generatePDF($demande);
+                $demande->fichier_genere_path = $pdfPath;
+                $demande->save();
+                
+                // Update attestation_scolaires table with generation timestamp
+                if ($demande->type_document === 'attestation_scolaire' && $demande->attestationScolaire) {
+                    $demande->attestationScolaire->update([
+                        'updated_at' => now()
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('PDF generation failed: ' . $e->getMessage());
+                \Log::error('Stack trace: ' . $e->getTraceAsString());
+                
+                // Still send email even if PDF generation fails
             }
+
+            \DB::commit();
         } catch (\Exception $e) {
-            \Log::error('PDF generation failed: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
-            
-            // Still send email even if PDF generation fails
+            \DB::rollBack();
+            \Log::error('Error validating demande: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la validation: ' . $e->getMessage()
+            ], 500);
         }
 
         // Send email notification to student with PDF attachment
+        // Done after commit to avoid holding lock during email sending
         $etudiant = $demande->etudiant;
         $typeDocument = $demande->getTypeDocumentLabel();
         
@@ -336,7 +350,7 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Demande validée avec succès.',
-            'data' => $demande->load('etudiant'),
+            'data' => $demande->fresh()->load('etudiant'),
             'pdf_path' => $pdfPath
         ]);
     }
@@ -398,15 +412,18 @@ class AdminController extends Controller
 
         $demande = Demande::findOrFail($id);
 
-        $demande->update([
-            'status' => 'rejetee',
-            'raison_refus' => $request->raison,
-            'date_traitement' => now(),
-            'traite_par_admin_id' => auth()->id(),
-        ]);
+        $demande->status = 'rejetee';
+        $demande->raison_refus = $request->raison;
+        $demande->date_traitement = now();
+        $demande->traite_par_admin_id = auth()->id();
+        $demande->save();
 
         // Envoyer email de refus à l'étudiant
-        $this->emailService->envoyerRefusDemande($demande);
+        try {
+            $this->emailService->envoyerRefusDemande($demande);
+        } catch (\Exception $e) {
+            \Log::error('Email refus sending failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
