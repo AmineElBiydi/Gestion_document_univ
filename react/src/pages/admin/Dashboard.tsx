@@ -95,6 +95,8 @@ export default function AdminDashboard() {
   const [statsData, setStatsData] = useState<any[]>([]);
   const [barChartData, setBarChartData] = useState<any[]>([]);
   const [pieChartData, setPieChartData] = useState<any[]>([]);
+  const [reclStatusData, setReclStatusData] = useState<any[]>([]);
+  const [reclTypeData, setReclTypeData] = useState<any[]>([]);
   const [lineChartData, setLineChartData] = useState<any[]>([]);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
@@ -177,6 +179,24 @@ export default function AdminDashboard() {
         
         // Use real monthly performance data from API
         setLineChartData(stats.performance_mensuelle);
+
+        // Transform reclamation stats
+        if (stats.reclamations_par_status) {
+          setReclStatusData([
+            { name: "Non traitée", value: stats.reclamations_par_status.non_traitee, color: "hsl(var(--warning))" },
+            { name: "En cours", value: stats.reclamations_par_status.en_cours, color: "hsl(var(--info))" },
+            { name: "Traitée", value: stats.reclamations_par_status.traitee, color: "hsl(var(--success))" },
+          ]);
+        }
+
+        if (stats.reclamations_par_type) {
+          setReclTypeData([
+            { name: "Retard", value: stats.reclamations_par_type.retard },
+            { name: "Refus injustifié", value: stats.reclamations_par_type.refus_injustifie },
+            { name: "Doc incorrect", value: stats.reclamations_par_type.document_incorrect },
+            { name: "Problème Tech", value: stats.reclamations_par_type.probleme_technique },
+          ]);
+        }
       }
     } catch (error: any) {
       console.error("Dashboard stats error:", error);
@@ -349,6 +369,82 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Reclamations Analysis Grid */}
+          <div className="grid gap-6 lg:grid-cols-2 mb-8">
+            {/* Reclamation Status Pie Chart */}
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <div className="mb-6">
+                <h3 className="font-semibold text-foreground">État des réclamations</h3>
+                <p className="text-sm text-muted-foreground">
+                  Distribution par statut de traitement
+                </p>
+              </div>
+              <div className="flex items-center justify-center">
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={reclStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {reclStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex justify-center gap-4 mt-4">
+                {reclStatusData.filter(i => i.value > 0).map((item) => (
+                  <div key={item.name} className="flex items-center gap-2 text-sm">
+                    <div
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-muted-foreground">{item.name}</span>
+                    <span className="font-medium">({item.value})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Reclamation Type Bar Chart */}
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <div className="mb-6">
+                <h3 className="font-semibold text-foreground">Motifs de réclamation</h3>
+                <p className="text-sm text-muted-foreground">
+                  Classification par type de problème
+                </p>
+              </div>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={reclTypeData} layout="vertical" margin={{ left: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={true} vertical={false} />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
+                  <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={100} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Bar dataKey="value" fill="hsl(var(--destructive))" radius={[0, 4, 4, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 

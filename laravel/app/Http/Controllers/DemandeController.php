@@ -16,6 +16,7 @@ use App\Services\EmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class DemandeController extends Controller
 {
@@ -104,9 +105,12 @@ class DemandeController extends Controller
                 $anneesUniversitaires = $student->inscriptions()
                     ->with('anneeUniversitaire')
                     ->get()
-                    ->pluck('anneeUniversitaire.libelle')
-                    ->filter()
-                    ->unique()
+                    ->map(function ($inscription) {
+                        return [
+                            'id' => $inscription->id,
+                            'libelle' => $inscription->anneeUniversitaire->libelle ?? 'Année inconnue'
+                        ];
+                    })
                     ->values()
                     ->toArray();
             }
@@ -124,12 +128,28 @@ class DemandeController extends Controller
     }
 
     /**
+     * Get list of professors for convention stage form
+     */
+    public function getProfesseurs()
+    {
+        $professeurs = Professeur::select('id', 'nom', 'prenom', 'email', 'specialite')
+            ->orderBy('nom')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $professeurs
+        ]);
+    }
+
+    /**
      * Créer une nouvelle demande de document
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
+        \Log::info('Store request:', $request->all());
         // Validation des données de base
         $validated = $request->validate([
             'email' => 'required|email',
@@ -214,8 +234,19 @@ class DemandeController extends Controller
                 ]
             ], 201);
 
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Les données fournies sont invalides.',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error in DemandeController@store: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Une erreur est survenue lors de l\'enregistrement de votre demande.',

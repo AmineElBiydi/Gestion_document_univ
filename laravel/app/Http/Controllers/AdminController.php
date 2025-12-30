@@ -119,12 +119,21 @@ class AdminController extends Controller
                                ->whereMonth('created_at', $lastMonth)
                                ->whereYear('created_at', $lastMonthYear)
                                ->count();
+
+        // Reclamation counts
+        $currentReclamations = Reclamation::whereMonth('created_at', $currentMonth)
+                                        ->whereYear('created_at', $currentYear)
+                                        ->count();
+        $lastReclamations = Reclamation::whereMonth('created_at', $lastMonth)
+                                      ->whereYear('created_at', $lastMonthYear)
+                                      ->count();
         
         // Calculate percentage changes
         $totalChange = $lastTotal > 0 ? (($currentTotal - $lastTotal) / $lastTotal) * 100 : 0;
         $enAttenteChange = $lastEnAttente > 0 ? (($currentEnAttente - $lastEnAttente) / $lastEnAttente) * 100 : 0;
         $valideesChange = $lastValidees > 0 ? (($currentValidees - $lastValidees) / $lastValidees) * 100 : 0;
         $rejeteesChange = $lastRejetees > 0 ? (($currentRejetees - $lastRejetees) / $lastRejetees) * 100 : 0;
+        $reclamationsChange = $lastReclamations > 0 ? (($currentReclamations - $lastReclamations) / $lastReclamations) * 100 : 0;
         
         $stats = [
             'total_demandes' => [
@@ -148,9 +157,20 @@ class AdminController extends Controller
                 'trend' => $rejeteesChange >= 0 ? 'up' : 'down'
             ],
             'reclamations' => [
-                'value' => \App\Models\Reclamation::count(),
-                'change' => 0, // TODO: Calculate month-over-month change for reclamations
-                'trend' => 'down' // TODO: Calculate trend for reclamations
+                'value' => Reclamation::count(),
+                'change' => round($reclamationsChange, 1),
+                'trend' => $reclamationsChange >= 0 ? 'up' : 'down'
+            ],
+            'reclamations_par_status' => [
+                'non_traitee' => Reclamation::where('status', 'non_traitee')->count(),
+                'en_cours' => Reclamation::where('status', 'en_cours')->count(),
+                'traitee' => Reclamation::where('status', 'traitee')->count(),
+            ],
+            'reclamations_par_type' => [
+                'retard' => Reclamation::where('type', 'retard')->count(),
+                'refus_injustifie' => Reclamation::where('type', 'refus_injustifie')->count(),
+                'document_incorrect' => Reclamation::where('type', 'document_incorrect')->count(),
+                'probleme_technique' => Reclamation::where('type', 'probleme_technique')->count(),
             ],
             'par_type' => [
                 'attestation_scolaire' => Demande::where('type_document', 'attestation_scolaire')->count(),
@@ -577,6 +597,7 @@ class AdminController extends Controller
     {
         $query = Demande::with([
             'etudiant',
+            'reclamations', // Add this
             'inscription.filiere',
             'inscription.niveau',
             'inscription.anneeUniversitaire',
@@ -607,7 +628,7 @@ class AdminController extends Controller
                   ->orWhere('cin', 'like', "%{$search}%")
                   ->orWhere('nom', 'like', "%{$search}%")
                   ->orWhere('prenom', 'like', "%{$search}%");
-            });
+            })->orWhere('num_demande', 'like', "%{$search}%");
         }
 
         if ($request->has('date_debut') && $request->has('date_fin')) {
@@ -654,7 +675,7 @@ class AdminController extends Controller
                   ->orWhere('cin', 'like', "%{$search}%")
                   ->orWhere('nom', 'like', "%{$search}%")
                   ->orWhere('prenom', 'like', "%{$search}%");
-            });
+            })->orWhere('num_demande', 'like', "%{$search}%");
         }
 
         $demandes = $query->orderBy('created_at', 'desc')->get();

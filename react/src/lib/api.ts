@@ -49,7 +49,11 @@ export const apiEndpoints = {
     },
   }),
   suivreDemandes: (data: any) => api.post('/suivi-demandes', data),
-  validateStudent: (data: any) => api.post('/validate-student', data),
+  validateStudent: (data: { email: string; apogee: string; cin: string }) =>
+    api.post('/validate-student', data),
+
+  // Get professors list
+  getProfesseurs: () => api.get('/professeurs'),
 
   // Admin authentication
   adminLogin: (credentials: { identifiant: string; password: string }) =>
