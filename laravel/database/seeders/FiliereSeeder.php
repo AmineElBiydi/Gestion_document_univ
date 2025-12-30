@@ -15,7 +15,7 @@ class FiliereSeeder extends Seeder
         $filieres = [
             // Cycle Préparatoire
             [
-                'code_filiere' => 'CP',
+                'code_filiere' => '2AP',
                 'nom_filiere' => 'Cycle Préparatoire',
                 'cycle' => 'CP',
                 'description' => 'Cycle préparatoire intégré - Formation de base en sciences et techniques',
@@ -65,20 +65,11 @@ class FiliereSeeder extends Seeder
                 'description' => 'Formation d\'ingénieurs en Big Data, IA et science des données',
                 'est_active' => true,
             ],
-
-            // Masters
             [
-                'code_filiere' => 'MIAGE',
-                'nom_filiere' => 'Master MIAGE',
-                'cycle' => 'Master',
-                'description' => 'Master en Informatique Appliquée à la Gestion des Entreprises',
-                'est_active' => true,
-            ],
-            [
-                'code_filiere' => 'MSI',
-                'nom_filiere' => 'Master Systèmes Intelligents',
-                'cycle' => 'Master',
-                'description' => 'Master en Intelligence Artificielle et Systèmes Intelligents',
+                'code_filiere' => 'GSTR',
+                'nom_filiere' => 'Génie des Systèmes de Télécommunications et Réseaux',
+                'cycle' => 'CI',
+                'description' => 'Formation d\'ingénieurs en Big Data, IA et science des données',
                 'est_active' => true,
             ],
         ];
