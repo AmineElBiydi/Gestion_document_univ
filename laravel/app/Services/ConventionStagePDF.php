@@ -13,11 +13,16 @@ class ConventionStagePDF
         $etudiant = $demande->etudiant;
         $inscription = $demande->inscription;
         
+        $arabic = new \ArPHP\I18N\Arabic();
+        
         $data = [
             'etudiant' => $etudiant,
             'convention' => $convention,
             'inscription' => $inscription,
             'demande' => $demande,
+            'univ_ar' => $arabic->utf8Glyphs("جامعة عبد المالك السعدي"),
+            'ensa_ar' => $arabic->utf8Glyphs("المدرسة الوطنية للعلوم التطبيقية"),
+            'tetouan_ar' => $arabic->utf8Glyphs("تطوان"),
         ];
         
         $pdf = Pdf::loadView('pdf.convention-stage', $data);

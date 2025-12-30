@@ -3,86 +3,93 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 20mm 25mm; }
+        @page { margin: 8mm 12mm; }
         body { 
             font-family: 'DejaVu Sans', 'Arial', sans-serif; 
-            font-size: 10pt; 
-            line-height: 1.5;
+            font-size: 8.2pt; 
+            line-height: 1.05;
+            color: #222;
         }
         .header { 
             display: table;
             width: 100%;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10pt;
-            margin-bottom: 15pt;
+            border-bottom: 1px solid #000;
+            padding-bottom: 4pt;
+            margin-bottom: 8pt;
         }
         .header-left, .header-right {
             display: table-cell;
-            width: 38%;
+            width: 42%;
             vertical-align: middle;
             font-weight: bold;
-            font-size: 10pt;
-            line-height: 1.4;
+            font-size: 8.2pt;
+            line-height: 1.1;
         }
         .header-center {
             display: table-cell;
-            width: 24%;
+            width: 16%;
             text-align: center;
             vertical-align: middle;
         }
         .header-right { 
             text-align: right;
             direction: rtl;
-            font-family: 'DejaVu Sans', 'Arial', sans-serif;
         }
         .logo {
-            max-width: 70px;
-            max-height: 70px;
+            max-width: 55px;
+            max-height: 55px;
             display: inline-block;
         }
         h1 {
             text-align: center;
-            font-size: 18pt;
+            font-size: 15pt;
             font-weight: bold;
-            margin: 15pt 0 5pt 0;
+            margin: 5pt 0 2pt 0;
+            text-transform: uppercase;
         }
         .subtitle {
             text-align: center;
-            font-size: 10pt;
+            font-size: 8.5pt;
             font-style: italic;
             text-decoration: underline;
-            margin-bottom: 20pt;
+            margin-bottom: 6pt;
         }
         h2 {
             text-align: center;
-            font-size: 12pt;
+            font-size: 10.5pt;
             font-weight: bold;
-            margin: 15pt 0;
+            margin: 4pt 0;
+            background-color: #f5f5f5;
+            padding: 1.5pt;
         }
         .section {
-            margin-bottom: 15pt;
+            margin-bottom: 5pt;
             text-align: justify;
         }
+        .section p {
+            margin: 0 0 3pt 0;
+        }
         .article {
-            margin-bottom: 15pt;
+            margin-bottom: 6pt;
         }
         .article h3 {
-            font-size: 11pt;
+            font-size: 9.5pt;
             font-weight: bold;
-            margin-bottom: 8pt;
+            margin: 0 0 2pt 0;
+            color: #000;
         }
         .article p {
-            margin: 0 0 8pt 0;
+            margin: 0 0 3pt 0;
             text-align: justify;
         }
         .bold { font-weight: bold; }
         .link { color: #0066cc; font-weight: bold; }
-        .right { text-align: right; margin-top: 8pt; }
-        .indent { margin-left: 20pt; }
+        .right { text-align: right; margin-top: 4pt; }
+        .indent { margin-left: 12pt; }
         .signatures {
-            border-top: 2px solid #000;
-            padding-top: 20pt;
-            margin-top: 20pt;
+            border-top: 1px solid #000;
+            padding-top: 6pt;
+            margin-top: 6pt;
         }
         .sig-table {
             width: 100%;
@@ -91,11 +98,12 @@
             width: 50%;
             text-align: center;
             vertical-align: top;
-            padding-bottom: 80pt;
+            padding-bottom: 30pt;
         }
         .sig-title {
             font-weight: bold;
-            margin-bottom: 10pt;
+            font-size: 8.5pt;
+            margin-bottom: 4pt;
         }
     </style>
 </head>
@@ -112,9 +120,9 @@
             <img src="https://www.9rayti.com/img/etablissement/universite-abdelmalek-essaadi-tetouan_5e4c0f3a2b155.jpg" alt="Logo" class="logo" />
         </div>
         <div class="header-right">
-            <div>جامعة عبد المالك السعدي</div>
-            <div>المدرسة الوطنية للعلوم التطبيقية</div>
-            <div style="text-decoration: underline;">تطوان</div>
+            <div>{{ $univ_ar }}</div>
+            <div>{{ $ensa_ar }}</div>
+            <div style="text-decoration: underline;">{{ $tetouan_ar }}</div>
         </div>
     </div>
 
@@ -223,7 +231,7 @@
             <tr>
                 <td class="sig-cell">
                     <div class="sig-title">Nom et signature du Stagiaire</div>
-                    <div style="margin-top: 60pt; font-weight: bold;">{{ $etudiant->prenom }} {{ $etudiant->nom }}</div>
+                    <div style="margin-top: 30pt; font-weight: bold;">{{ $etudiant->prenom }} {{ $etudiant->nom }}</div>
                 </td>
                 <td class="sig-cell">
                     <div class="sig-title">Le Coordonnateur de la filière</div>
