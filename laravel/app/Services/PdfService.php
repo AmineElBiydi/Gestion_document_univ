@@ -140,6 +140,57 @@ class PDFService
      */
     private function generateReleveNotes(Demande $demande, Etudiant $etudiant)
     {
+        $inscription = $demande->inscription;
+        
+        // Ensure inscription is loaded
+        if (!$inscription) {
+            // Fallback: try to find an inscription for the current year or most recent
+            $inscription = $etudiant->inscriptions()->orderBy('created_at', 'desc')->first();
+        }
+
+        $decision = null;
+        if ($inscription) {
+            $decision = $inscription->decisionAnnee;
+            
+            // Load notes if not already loaded
+            if (!$inscription->relationLoaded('notes')) {
+                $inscription->load(['notes.moduleNiveau.module']);
+            }
+        }
+        
+        $notes = [];
+        if ($inscription && $inscription->notes) {
+            foreach ($inscription->notes as $note) {
+                $moduleName = $note->moduleNiveau && $note->moduleNiveau->module 
+                    ? $note->moduleNiveau->module->nom_module 
+                    : 'Module inconnu';
+                
+                $notes[] = [
+                    'module' => $moduleName,
+                    'note' => $note->note,
+                    'resultat' => $note->est_valide ? 'Validé' : 'Non Validé',
+                    'session' => $note->type_session
+                ];
+            }
+        }
+
+        $data = [
+            'studentName' => $etudiant->nom . ' ' . $etudiant->prenom,
+            'cinNumber' => $etudiant->cin,
+            'apogeeNumber' => $etudiant->apogee,
+            'academicYear' => $inscription && $inscription->anneeUniversitaire ? $inscription->anneeUniversitaire->libelle : 'N/A',
+            'filiere' => $inscription && $inscription->filiere ? $inscription->filiere->nom_filiere : 'N/A',
+            'niveau' => $inscription && $inscription->niveau ? $inscription->niveau->libelle : 'N/A',
+            'notes' => $notes,
+            'decision' => $decision ? $decision->decision : 'En cours',
+            'mention' => $decision ? $decision->mention : '',
+            'moyenne' => $decision ? $decision->moyenne_annuelle : '',
+            'dateIssued' => now()->format('d/m/Y'),
+            'requestNumber' => $demande->num_demande,
+        ];
+
+        $html = $this->getReleveNotesTemplate($data);
+        
         $filename = 'releve_notes_' . $demande->num_demande . '.pdf';
         $path = storage_path('app/public/documents/' . $filename);
         
@@ -147,7 +198,6 @@ class PDFService
             mkdir(dirname($path), 0755, true);
         }
         
-        $html = '<h1>Relevé de Notes</h1><p>Document en cours de développement</p>';
         $this->generatePDFFromHTML($html, $path);
         
         return $path;
@@ -480,6 +530,144 @@ HTML;
     <div class="footer">
         <p>Fait à Tétouan, le {$data['dateIssued']}</p>
         <p><strong>Le Directeur</strong></p>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Get HTML template for Relevé de Notes
+     */
+    private function getReleveNotesTemplate(array $data)
+    {
+        $rows = '';
+        foreach ($data['notes'] as $note) {
+            $rows .= "
+            <tr>
+                <td style='text-align: left; padding-left: 10px;'>{$note['module']}</td>
+                <td>{$note['note']}/20</td>
+                <td>{$note['resultat']}</td>
+                <td>" . ucfirst($note['session']) . "</td>
+            </tr>";
+        }
+
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            font-size: 11pt;
+            line-height: 1.4;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .title {
+            text-align: center;
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 20px 0;
+            text-decoration: underline;
+            text-transform: uppercase;
+        }
+        .student-info {
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #eee;
+        }
+        .info-row {
+            margin-bottom: 8px;
+        }
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 180px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+            font-size: 10pt;
+        }
+        th {
+            background-color: #eee;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 40px;
+            width: 100%;
+        }
+        .decision-box {
+            border: 2px solid #000;
+            padding: 10px;
+            margin-top: 20px;
+            width: 60%;
+        }
+        .signature {
+            text-align: right;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <strong>ROYAUME DU MAROC</strong><br>
+        Université Abdelmalek Essaâdi<br>
+        École Nationale des Sciences Appliquées - Tétouan
+    </div>
+
+    <div class="title">RELEVÉ DE NOTES</div>
+
+    <div class="student-info">
+        <div class="info-row"><span class="label">Nom et Prénom:</span> {$data['studentName']}</div>
+        <div class="info-row"><span class="label">Code Apogée:</span> {$data['apogeeNumber']}</div>
+        <div class="info-row"><span class="label">C.I.N:</span> {$data['cinNumber']}</div>
+        <div class="info-row"><span class="label">Année Universitaire:</span> {$data['academicYear']}</div>
+        <div class="info-row"><span class="label">Filière:</span> {$data['filiere']}</div>
+        <div class="info-row"><span class="label">Niveau:</span> {$data['niveau']}</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 40%;">Module</th>
+                <th style="width: 15%;">Note</th>
+                <th style="width: 25%;">Résultat</th>
+                <th style="width: 20%;">Session</th>
+            </tr>
+        </thead>
+        <tbody>
+            {$rows}
+        </tbody>
+    </table>
+
+    <div class="decision-box">
+        <strong>RÉSULTAT ANNUEL</strong><br>
+        Moyenne : <strong>{$data['moyenne']} / 20</strong><br>
+        Résultat : <strong>{$data['decision']}</strong><br>
+        Mention : <strong>{$data['mention']}</strong>
+    </div>
+
+    <div class="footer">
+        <div class="signature">
+            Fait à Tétouan, le {$data['dateIssued']}<br><br>
+            <strong>Le Directeur</strong>
+        </div>
     </div>
 </body>
 </html>
