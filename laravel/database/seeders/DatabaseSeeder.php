@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
 
                 // Additional data
             DemandeSeeder::class,
+            NoteSeeder::class,
             ReclamationSeeder::class,
         ]);
     }

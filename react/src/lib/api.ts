@@ -50,33 +50,34 @@ export const apiEndpoints = {
   }),
   suivreDemandes: (data: any) => api.post('/suivi-demandes', data),
   validateStudent: (data: any) => api.post('/validate-student', data),
-  
+
   // Admin authentication
-  adminLogin: (credentials: { identifiant: string; password: string }) => 
+  adminLogin: (credentials: { identifiant: string; password: string }) =>
     api.post('/admin/login', credentials),
   adminLogout: () => api.post('/admin/logout'),
-  
+
   // Admin dashboard
   getDashboard: () => api.get('/admin/dashboard'),
-  
+
   // Historique page - finalized requests (accepted + refused)
   getHistorique: (params?: any) => api.get('/admin/historique', { params }),
   reverserDemande: (id: string) => api.put(`/admin/historique/${id}/reverser`),
-  
+
   // Demande page - pending requests only
   getDemandesAttente: (params?: any) => api.get('/admin/demandes-attente', { params }),
-  
+
   // Legacy routes (keep for backward compatibility)
   getDemandes: (params?: any) => api.get('/admin/demandes', { params }),
   getDemandeDetails: (id: string) => api.get(`/admin/demandes/${id}`),
+  getDemandeHistory: (id: string) => api.get(`/admin/demandes/${id}/history`),
   previewPDF: (id: string) => api.get(`/admin/demandes/${id}/preview`),
   validerDemande: (id: string) => api.put(`/admin/demandes/${id}/valider`),
-  refuserDemande: (id: string, data: { raison: string }) => 
+  refuserDemande: (id: string, data: { raison: string }) =>
     api.put(`/admin/demandes/${id}/refuser`, data),
-  
+
   // Admin reclamations
   getReclamations: (params?: any) => api.get('/admin/reclamations', { params }),
-  repondreReclamation: (id: string, data: { reponse: string }) => 
+  repondreReclamation: (id: string, data: { reponse: string }) =>
     api.put(`/admin/reclamations/${id}/repondre`, data),
 };
 

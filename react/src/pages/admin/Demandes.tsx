@@ -77,7 +77,10 @@ export default function AdminDemandes() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [refusalReason, setRefusalReason] = useState("");
+  const [refusalReason, setRefusalReason] = useState("");
   const [customReason, setCustomReason] = useState("");
+  const [history, setHistory] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Load demandes from API
   useEffect(() => {
@@ -96,7 +99,7 @@ export default function AdminDemandes() {
       if (searchQuery) params.search = searchQuery;
 
       const response = await apiEndpoints.getDemandesAttente(params);
-      
+
       if (response.data.success) {
         // Transform backend data to frontend format
         const transformedData = response.data.data.map((item: any) => ({
@@ -120,7 +123,7 @@ export default function AdminDemandes() {
           details: getDocumentDetails(item),
           refusalReason: item.raison_refus,
         }));
-        
+
         setRequests(transformedData);
       }
     } catch (error: any) {
@@ -132,9 +135,23 @@ export default function AdminDemandes() {
     }
   };
 
+  const loadHistory = async (id: string) => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await apiEndpoints.getDemandeHistory(id);
+      if (response.data.success) {
+        setHistory(response.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to load history", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
   const getDocumentDetails = (item: any): Record<string, string> => {
     const details: Record<string, string> = {};
-    
+
     if (item.attestationScolaire) {
       Object.assign(details, item.attestationScolaire);
     }
@@ -147,7 +164,7 @@ export default function AdminDemandes() {
     if (item.conventionStage) {
       Object.assign(details, item.conventionStage);
     }
-    
+
     return details;
   };
 
@@ -164,10 +181,10 @@ export default function AdminDemandes() {
     setSelectedRequest(request);
     setIsLoadingPdf(true);
     setShowPreviewDialog(true);
-    
+
     try {
       const response = await apiEndpoints.previewPDF(request.id);
-      
+
       if (response.data.success) {
         setPdfUrl(response.data.pdf_url);
       }
@@ -183,7 +200,7 @@ export default function AdminDemandes() {
   const handleValidate = async (request: DocumentRequest) => {
     try {
       const response = await apiEndpoints.validerDemande(request.id);
-      
+
       if (response.data.success) {
         setRequests(
           requests.map((r) =>
@@ -201,7 +218,7 @@ export default function AdminDemandes() {
 
   const handleValidateFromPreview = async () => {
     if (!selectedRequest) return;
-    
+
     setShowPreviewDialog(false);
     await handleValidate(selectedRequest);
     setSelectedRequest(null);
@@ -215,10 +232,10 @@ export default function AdminDemandes() {
       toast.error("Veuillez sélectionner ou saisir un motif de refus");
       return;
     }
-    
+
     try {
       const response = await apiEndpoints.refuserDemande(selectedRequest.id, { raison: reason });
-      
+
       if (response.data.success) {
         setRequests(
           requests.map((r) =>
@@ -329,6 +346,8 @@ export default function AdminDemandes() {
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedRequest(request);
+                              // Load history when opening details
+                              loadHistory(request.id);
                               setShowViewDialog(true);
                             }}
                           >
@@ -438,6 +457,30 @@ export default function AdminDemandes() {
                   </div>
                 </div>
               )}
+
+              {/* History Section */}
+              <div className="rounded-lg bg-muted/50 p-4">
+                <h4 className="font-semibold mb-2">Historique des actions</h4>
+                {isLoadingHistory ? (
+                  <div className="text-center py-2 text-sm text-muted-foreground">Chargement...</div>
+                ) : history.length > 0 ? (
+                  <div className="space-y-3">
+                    {history.map((item: any, index: number) => (
+                      <div key={index} className="flex gap-3 text-sm border-l-2 border-primary/20 pl-3">
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{item.action}</p>
+                          {item.details && <p className="text-muted-foreground text-xs mt-0.5">{item.details}</p>}
+                        </div>
+                        <div className="text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(item.created_at).toLocaleString('fr-FR')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Aucun historique disponible</p>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -533,8 +576,8 @@ export default function AdminDemandes() {
             )}
           </div>
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowPreviewDialog(false);
                 setPdfUrl(null);
@@ -543,7 +586,7 @@ export default function AdminDemandes() {
             >
               Annuler
             </Button>
-            <Button 
+            <Button
               onClick={handleValidateFromPreview}
               disabled={isLoadingPdf}
               className="bg-success hover:bg-success/90"
@@ -554,6 +597,6 @@ export default function AdminDemandes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </Layout >
   );
 }
