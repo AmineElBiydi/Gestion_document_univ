@@ -9,18 +9,18 @@ use App\Models\Etudiant;
 use Illuminate\Support\Facades\Mail;
 use App\Services\EmailService;
 use App\Services\PDFService;
-    use Illuminate\Http\Request;
-    use Illuminate\Support\Facades\Hash;
-    use App\Mail\DemandeValidee;
-    use App\Models\DemandeHistorique;
-    
-    class AdminController extends Controller
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use App\Mail\DemandeValidee;
+use App\Models\DemandeHistorique;
+
+class AdminController extends Controller
+{
+    protected $emailService;
+    protected $pdfService;
+
+    public function __construct(EmailService $emailService, PDFService $pdfService)
     {
-        protected $emailService;
-        protected $pdfService;
-    
-        public function __construct(EmailService $emailService, PDFService $pdfService)
-        {
         $this->emailService = $emailService;
         $this->pdfService = $pdfService;
     }
@@ -85,56 +85,56 @@ use App\Services\PDFService;
         $currentYear = now()->year;
         $lastMonth = now()->subMonth()->month;
         $lastMonthYear = now()->subMonth()->year;
-        
+
         // Get current month counts
         $currentTotal = Demande::whereMonth('created_at', $currentMonth)
-                              ->whereYear('created_at', $currentYear)
-                              ->count();
+            ->whereYear('created_at', $currentYear)
+            ->count();
         $currentEnAttente = Demande::where('status', 'en_attente')
-                                   ->whereMonth('created_at', $currentMonth)
-                                   ->whereYear('created_at', $currentYear)
-                                   ->count();
+            ->whereMonth('created_at', $currentMonth)
+            ->whereYear('created_at', $currentYear)
+            ->count();
         $currentValidees = Demande::where('status', 'validee')
-                                  ->whereMonth('created_at', $currentMonth)
-                                  ->whereYear('created_at', $currentYear)
-                                  ->count();
+            ->whereMonth('created_at', $currentMonth)
+            ->whereYear('created_at', $currentYear)
+            ->count();
         $currentRejetees = Demande::where('status', 'rejetee')
-                                  ->whereMonth('created_at', $currentMonth)
-                                  ->whereYear('created_at', $currentYear)
-                                  ->count();
-        
+            ->whereMonth('created_at', $currentMonth)
+            ->whereYear('created_at', $currentYear)
+            ->count();
+
         // Get last month counts
         $lastTotal = Demande::whereMonth('created_at', $lastMonth)
-                           ->whereYear('created_at', $lastMonthYear)
-                           ->count();
+            ->whereYear('created_at', $lastMonthYear)
+            ->count();
         $lastEnAttente = Demande::where('status', 'en_attente')
-                               ->whereMonth('created_at', $lastMonth)
-                               ->whereYear('created_at', $lastMonthYear)
-                               ->count();
+            ->whereMonth('created_at', $lastMonth)
+            ->whereYear('created_at', $lastMonthYear)
+            ->count();
         $lastValidees = Demande::where('status', 'validee')
-                               ->whereMonth('created_at', $lastMonth)
-                               ->whereYear('created_at', $lastMonthYear)
-                               ->count();
+            ->whereMonth('created_at', $lastMonth)
+            ->whereYear('created_at', $lastMonthYear)
+            ->count();
         $lastRejetees = Demande::where('status', 'rejetee')
-                               ->whereMonth('created_at', $lastMonth)
-                               ->whereYear('created_at', $lastMonthYear)
-                               ->count();
+            ->whereMonth('created_at', $lastMonth)
+            ->whereYear('created_at', $lastMonthYear)
+            ->count();
 
         // Reclamation counts
         $currentReclamations = Reclamation::whereMonth('created_at', $currentMonth)
-                                        ->whereYear('created_at', $currentYear)
-                                        ->count();
+            ->whereYear('created_at', $currentYear)
+            ->count();
         $lastReclamations = Reclamation::whereMonth('created_at', $lastMonth)
-                                      ->whereYear('created_at', $lastMonthYear)
-                                      ->count();
-        
+            ->whereYear('created_at', $lastMonthYear)
+            ->count();
+
         // Calculate percentage changes
         $totalChange = $lastTotal > 0 ? (($currentTotal - $lastTotal) / $lastTotal) * 100 : 0;
         $enAttenteChange = $lastEnAttente > 0 ? (($currentEnAttente - $lastEnAttente) / $lastEnAttente) * 100 : 0;
         $valideesChange = $lastValidees > 0 ? (($currentValidees - $lastValidees) / $lastValidees) * 100 : 0;
         $rejeteesChange = $lastRejetees > 0 ? (($currentRejetees - $lastRejetees) / $lastRejetees) * 100 : 0;
         $reclamationsChange = $lastReclamations > 0 ? (($currentReclamations - $lastReclamations) / $lastReclamations) * 100 : 0;
-        
+
         $stats = [
             'total_demandes' => [
                 'value' => Demande::count(),
@@ -208,7 +208,7 @@ use App\Services\PDFService;
     {
         $startOfWeek = now()->startOfWeek();
         $targetDay = $startOfWeek->copy()->addDays($dayOfWeek === 0 ? 6 : $dayOfWeek - 1);
-        
+
         return Demande::whereDate('created_at', $targetDay->format('Y-m-d'))->count();
     }
 
@@ -220,12 +220,12 @@ use App\Services\PDFService;
         $startOfMonth = now()->startOfMonth();
         $startOfWeek = $startOfMonth->copy()->addWeeks($weekNumber - 1)->startOfWeek();
         $endOfWeek = $startOfWeek->copy()->endOfWeek();
-        
+
         // Ensure we don't go beyond current month
         if ($endOfWeek > now()->endOfMonth()) {
             $endOfWeek = now()->endOfMonth();
         }
-        
+
         return Demande::whereBetween('created_at', [$startOfWeek, $endOfWeek])
             ->whereIn('status', ['validee', 'rejetee'])
             ->count();
@@ -239,12 +239,12 @@ use App\Services\PDFService;
         $startOfMonth = now()->startOfMonth();
         $startOfWeek = $startOfMonth->copy()->addWeeks($weekNumber - 1)->startOfWeek();
         $endOfWeek = $startOfWeek->copy()->endOfWeek();
-        
+
         // Ensure we don't go beyond current month
         if ($endOfWeek > now()->endOfMonth()) {
             $endOfWeek = now()->endOfMonth();
         }
-        
+
         return Demande::whereBetween('created_at', [$startOfWeek, $endOfWeek])->count();
     }
 
@@ -281,9 +281,9 @@ use App\Services\PDFService;
             $search = $request->search;
             $query->whereHas('etudiant', function ($q) use ($search) {
                 $q->where('apogee', 'like', "%{$search}%")
-                  ->orWhere('cin', 'like', "%{$search}%")
-                  ->orWhere('nom', 'like', "%{$search}%")
-                  ->orWhere('prenom', 'like', "%{$search}%");
+                    ->orWhere('cin', 'like', "%{$search}%")
+                    ->orWhere('nom', 'like', "%{$search}%")
+                    ->orWhere('prenom', 'like', "%{$search}%");
             });
         }
 
@@ -330,7 +330,7 @@ use App\Services\PDFService;
                 $pdfPath = $this->pdfService->generatePDF($demande);
                 $demande->fichier_genere_path = $pdfPath;
                 $demande->save();
-                
+
                 // Update attestation_scolaires table with generation timestamp
                 if ($demande->type_document === 'attestation_scolaire' && $demande->attestationScolaire) {
                     $demande->attestationScolaire->update([
@@ -340,7 +340,7 @@ use App\Services\PDFService;
             } catch (\Exception $e) {
                 \Log::error('PDF generation failed: ' . $e->getMessage());
                 \Log::error('Stack trace: ' . $e->getTraceAsString());
-                
+
                 // Still send email even if PDF generation fails
             }
 
@@ -366,7 +366,7 @@ use App\Services\PDFService;
         // Done after commit to avoid holding lock during email sending
         $etudiant = $demande->etudiant;
         $typeDocument = $demande->getTypeDocumentLabel();
-        
+
         try {
             Mail::to($etudiant->email)->send(
                 new DemandeValidee($demande, $etudiant, $typeDocument, $pdfPath)
@@ -398,7 +398,7 @@ use App\Services\PDFService;
             'releveNotes.decisionAnnee',
             'conventionStage'
         ])->findOrFail($id);
-        
+
         if ($demande->status !== 'en_attente') {
             return response()->json([
                 'success' => false,
@@ -408,11 +408,11 @@ use App\Services\PDFService;
 
         try {
             $pdfPath = $this->pdfService->generatePDF($demande);
-            
+
             // Convert absolute path to relative URL
             $relativePath = str_replace(storage_path('app/public/'), '', $pdfPath);
             $pdfUrl = url('storage/' . $relativePath);
-            
+
             return response()->json([
                 'success' => true,
                 'pdf_url' => $pdfUrl,
@@ -421,7 +421,7 @@ use App\Services\PDFService;
         } catch (\Exception $e) {
             \Log::error('PDF preview generation failed: ' . $e->getMessage());
             \Log::error('Stack trace: ' . $e->getTraceAsString());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la génération du PDF: ' . $e->getMessage()
@@ -532,12 +532,12 @@ use App\Services\PDFService;
             $search = $request->search;
             $query->whereHas('etudiant', function ($q) use ($search) {
                 $q->where('apogee', 'like', "%{$search}%")
-                  ->orWhere('cin', 'like', "%{$search}%")
-                  ->orWhere('nom', 'like', "%{$search}%")
-                  ->orWhere('prenom', 'like', "%{$search}%");
+                    ->orWhere('cin', 'like', "%{$search}%")
+                    ->orWhere('nom', 'like', "%{$search}%")
+                    ->orWhere('prenom', 'like', "%{$search}%");
             })->orWhereHas('demande', function ($q) use ($search) {
                 $q->where('id', 'like', "%{$search}%")
-                  ->orWhere('num_demande', 'like', "%{$search}%");
+                    ->orWhere('num_demande', 'like', "%{$search}%");
             });
         }
 
@@ -558,7 +558,7 @@ use App\Services\PDFService;
     {
         // Debug: Log request data
         \Log::info('RepondreReclamation request data:', $request->all());
-        
+
         try {
             $validated = $request->validate([
                 'reponse' => 'required|string|min:10',
@@ -600,7 +600,7 @@ use App\Services\PDFService;
                 $demande->raison_refus = null;
                 $demande->date_traitement = now();
                 $demande->traite_par_admin_id = auth()->id();
-                
+
                 // Générer le PDF correspondant
                 try {
                     $pdfPath = $this->pdfService->generatePDF($demande);
@@ -608,7 +608,7 @@ use App\Services\PDFService;
                 } catch (\Exception $e) {
                     \Log::error('Erreur génération PDF lors de l\'inversion via réclamation: ' . $e->getMessage());
                 }
-                
+
                 $demande->save();
 
                 // Ajouter à l'historique
@@ -617,6 +617,21 @@ use App\Services\PDFService;
                     'user_id' => auth()->id(),
                     'action' => 'inversee_via_reclamation',
                     'details' => 'Statut inversé de Rejetée à Validée suite à une réclamation validée.',
+                ]);
+            } elseif (!$isValide && $demande && $demande->status === 'en_attente') {
+                // Refuser automatiquement la demande en attente si la réclamation n'est pas validée
+                $demande->status = 'rejetee';
+                $demande->raison_refus = 'Demande refusée suite à la réclamation non validée.';
+                $demande->date_traitement = now();
+                $demande->traite_par_admin_id = auth()->id();
+                $demande->save();
+
+                // Ajouter à l'historique
+                \App\Models\DemandeHistorique::create([
+                    'demande_id' => $demande->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'rejetee_via_reclamation',
+                    'details' => 'Demande refusée automatiquement suite à une réclamation non validée.',
                 ]);
             }
 
@@ -634,7 +649,7 @@ use App\Services\PDFService;
             if ($isValide && $demande) {
                 // Petit délai pour assurer la réception de deux emails distincts par certains serveurs
                 sleep(1);
-                
+
                 try {
                     $this->emailService->envoyerValidationDemande($demande);
                     \Log::info('Email validation habituel envoyé suite à réclamation: ' . $demande->num_demande);
@@ -694,9 +709,9 @@ use App\Services\PDFService;
             $search = $request->search;
             $query->whereHas('etudiant', function ($q) use ($search) {
                 $q->where('apogee', 'like', "%{$search}%")
-                  ->orWhere('cin', 'like', "%{$search}%")
-                  ->orWhere('nom', 'like', "%{$search}%")
-                  ->orWhere('prenom', 'like', "%{$search}%");
+                    ->orWhere('cin', 'like', "%{$search}%")
+                    ->orWhere('nom', 'like', "%{$search}%")
+                    ->orWhere('prenom', 'like', "%{$search}%");
             })->orWhere('num_demande', 'like', "%{$search}%");
         }
 
@@ -741,9 +756,9 @@ use App\Services\PDFService;
             $search = $request->search;
             $query->whereHas('etudiant', function ($q) use ($search) {
                 $q->where('apogee', 'like', "%{$search}%")
-                  ->orWhere('cin', 'like', "%{$search}%")
-                  ->orWhere('nom', 'like', "%{$search}%")
-                  ->orWhere('prenom', 'like', "%{$search}%");
+                    ->orWhere('cin', 'like', "%{$search}%")
+                    ->orWhere('nom', 'like', "%{$search}%")
+                    ->orWhere('prenom', 'like', "%{$search}%");
             })->orWhere('num_demande', 'like', "%{$search}%");
         }
 
@@ -829,9 +844,9 @@ use App\Services\PDFService;
             $search = $request->search;
             $query->whereHas('etudiant', function ($q) use ($search) {
                 $q->where('apogee', 'like', "%{$search}%")
-                  ->orWhere('cin', 'like', "%{$search}%")
-                  ->orWhere('nom', 'like', "%{$search}%")
-                  ->orWhere('prenom', 'like', "%{$search}%");
+                    ->orWhere('cin', 'like', "%{$search}%")
+                    ->orWhere('nom', 'like', "%{$search}%")
+                    ->orWhere('prenom', 'like', "%{$search}%");
             })->orWhere('num_demande', 'like', "%{$search}%");
         }
 
