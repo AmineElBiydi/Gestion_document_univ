@@ -19,7 +19,7 @@ export default function AdminLogin() {
 
     try {
       const response = await apiEndpoints.adminLogin({ identifiant, password });
-      
+
       if (response.data.success) {
         localStorage.setItem("admin_token", response.data.data.token);
         localStorage.setItem("adminLoggedIn", "true");
@@ -89,12 +89,6 @@ export default function AdminLogin() {
             </Button>
           </form>
 
-          {/* Demo credentials hint */}
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-            <p className="text-xs text-muted-foreground text-center">
-              <strong>Démo:</strong> admin / password123
-            </p>
-          </div>
         </div>
 
         {/* Back to home */}

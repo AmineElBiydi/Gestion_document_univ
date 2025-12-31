@@ -720,14 +720,6 @@ export default function Demande() {
                 </div>
               )}
 
-              {/* Demo hint */}
-              {!isIdentificationLocked && (
-                <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Démo:</strong> Utilisez student@universite.ma / 12345678 / AB123456
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Section 2: Document Selection & Details */}
