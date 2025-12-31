@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Relevé de Notes - {{ $etudiant->nom }} {{ $etudiant->prenom }}</title>
     <style>
         * {
@@ -10,18 +11,20 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
-        body { 
-            font-family: 'Times New Roman', Times, serif; 
-            font-size: 10pt; 
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 10pt;
             line-height: 1.2;
             margin: 0;
             padding: 0;
         }
+
         .arabic-text {
             font-family: 'DejaVu Sans', sans-serif;
             direction: rtl;
         }
+
         .header-box {
             border: 2px solid #000;
             padding: 10px;
@@ -99,7 +102,8 @@
             font-size: 11px;
         }
 
-        th, td {
+        th,
+        td {
             border: 1px solid #000;
             padding: 6px;
         }
@@ -170,25 +174,32 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Header -->
     <table style="width: 100%; border: 2px solid #000; border-collapse: collapse; margin-bottom: 10px;">
         <tr>
-            <td style="border: none; padding: 5px; font-weight: bold; font-size: 11px; width: 50%;">Université Abdelmalek Essaâdi</td>
-            <td style="border: none; padding: 5px; text-align: right; width: 50%;" class="arabic-text">{{ $univ_ar ?? 'جامعة عبد المالك السعدي' }}</td>
+            <td style="border: none; padding: 5px; font-weight: bold; font-size: 11px; width: 50%;">Université
+                Abdelmalek Essaâdi</td>
+            <td style="border: none; padding: 5px; text-align: right; width: 50%;" class="arabic-text">
+                {{ $univ_ar ?? 'جامعة عبد المالك السعدي' }}</td>
         </tr>
         <tr>
             <td style="border: none; padding: 5px; font-size: 11px; width: 50%;">
-                Année universitaire {{ str_replace('-', '/', $decision->inscription->anneeUniversitaire->libelle ?? $inscription->anneeUniversitaire->libelle ?? 'N/A') }}
+                Année universitaire
+                {{ str_replace('-', '/', $decision->inscription->anneeUniversitaire->libelle ?? $inscription->anneeUniversitaire->libelle ?? 'N/A') }}
             </td>
-            <td style="border: none; padding: 5px; text-align: right; width: 50%;" class="arabic-text">{{ $annee_univ_ar ?? 'السنة الجامعية' }}</td>
+            <td style="border: none; padding: 5px; text-align: right; width: 50%;" class="arabic-text">
+                {{ $annee_univ_ar ?? 'السنة الجامعية' }}</td>
         </tr>
     </table>
 
     <table style="width: 100%; margin-bottom: 15px;">
         <tr>
-            <td style="border: none; font-weight: bold; font-size: 11px; width: 60%;">École Nationale des Sciences Appliquées - Tétouan</td>
-            <td style="border: none; text-align: right; width: 40%; font-weight: bold;" class="arabic-text">{{ $ecole_ar ?? 'المدرسة الوطنية للعلوم التطبيقية - تطوان' }}</td>
+            <td style="border: none; font-weight: bold; font-size: 11px; width: 60%;">École Nationale des Sciences
+                Appliquées - Tétouan</td>
+            <td style="border: none; text-align: right; width: 40%; font-weight: bold;" class="arabic-text">
+                {{ $ecole_ar ?? 'المدرسة الوطنية للعلوم التطبيقية - تطوان' }}</td>
         </tr>
     </table>
 
@@ -201,36 +212,38 @@
 
     <!-- Session -->
     <div class="session-box">
-        Session {{ ($decision && $decision->type_session === 'rattrapage') ? '2' : '1' }}
+        Session 1
     </div>
 
     <!-- Student Info -->
     <div class="student-info">
         <div class="student-name">{{ $etudiant->nom }} {{ $etudiant->prenom }}</div>
-        
+
         <div class="info-row">
             <span class="info-label">N° Étudiant:</span> {{ $etudiant->apogee }}
             &nbsp;&nbsp;&nbsp;&nbsp;
             <span class="info-label">CNE / CIN:</span> {{ $etudiant->cin }}
         </div>
-        
+
         @if($etudiant->date_naissance)
-        <div class="info-row">
-            <span class="info-label">Né le :</span> {{ \Carbon\Carbon::parse($etudiant->date_naissance)->format('d F Y') }}
-            @if($etudiant->lieu_naissance)
-                &nbsp;&nbsp;&nbsp;&nbsp;
-                <span class="info-label">à :</span> {{ $etudiant->lieu_naissance }}
-            @endif
-        </div>
+            <div class="info-row">
+                <span class="info-label">Né le :</span>
+                {{ \Carbon\Carbon::parse($etudiant->date_naissance)->format('d F Y') }}
+                @if($etudiant->lieu_naissance)
+                    &nbsp;&nbsp;&nbsp;&nbsp;
+                    <span class="info-label">à :</span> {{ $etudiant->lieu_naissance }}
+                @endif
+            </div>
         @endif
-        
+
         <div class="inscription-info">
-            <span class="info-label">Inscrit en :</span> 
+            <span class="info-label">Inscrit en :</span>
             <span style="font-weight: bold;">
-                {{ $decision->inscription->niveau->libelle ?? $inscription->niveau->libelle ?? 'N/A' }} - {{ $decision->inscription->filiere->nom_filiere ?? $inscription->filiere->nom_filiere ?? 'N/A' }}
+                {{ $decision->inscription->niveau->libelle ?? $inscription->niveau->libelle ?? 'N/A' }} -
+                {{ $decision->inscription->filiere->nom_filiere ?? $inscription->filiere->nom_filiere ?? 'N/A' }}
             </span>
         </div>
-        
+
         <div style="margin-top: 10px;">a obtenu les notes suivantes :</div>
     </div>
 
@@ -263,7 +276,7 @@
                         @endif
                     </td>
                     <td class="centered">
-                        {{ $decision->inscription->niveau->code_niveau ?? $inscription->niveau->code_niveau ?? 'S' }} 
+                        {{ $decision->inscription->niveau->code_niveau ?? $inscription->niveau->code_niveau ?? 'S' }}
                         {{ str_replace('-', '/', $decision->inscription->anneeUniversitaire->libelle ?? $inscription->anneeUniversitaire->libelle ?? '') }}
                     </td>
                 </tr>
@@ -276,13 +289,18 @@
     </table>
 
     <!-- Result -->
-    <div class="result-box" style="display: table; width: 100%; border: 1px solid #000; padding: 5px; margin-top: 20px;">
+    <div class="result-box"
+        style="display: table; width: 100%; border: 1px solid #000; padding: 5px; margin-top: 20px;">
         <div style="display: table-row;">
-            <div style="display: table-cell; width: 40%; font-weight: bold;">Résultat d'admission session {{ ($decision && $decision->type_session === 'rattrapage') ? '2' : '1' }} :</div>
-            <div style="display: table-cell; width: 15%; text-align: center; font-weight: bold;">{{ $decision ? number_format($decision->moyenne_annuelle, 3) : '-' }} / 20</div>
-            <div style="display: table-cell; width: 15%; text-align: center; font-weight: bold;">{{ $decision ? strtoupper($decision->decision) : 'EN COURS' }}</div>
-            <div style="display: table-cell; width: 15%; text-align: center; font-weight: bold;">{{ $decision->mention ?? 'Passable' }}</div>
-            <div style="display: table-cell; width: 15%; text-align: right; font-weight: bold;">{{ $classement ?? '-' }}/{{ $total_etudiants ?? '-' }}</div>
+            <div style="display: table-cell; width: 40%; font-weight: bold;">Résultat d'admission :</div>
+            <div style="display: table-cell; width: 15%; text-align: center; font-weight: bold;">
+                {{ $decision ? number_format($decision->moyenne_annuelle, 3) : '-' }} / 20</div>
+            <div style="display: table-cell; width: 15%; text-align: center; font-weight: bold;">
+                {{ $decision ? strtoupper($decision->decision) : 'EN COURS' }}</div>
+            <div style="display: table-cell; width: 15%; text-align: center; font-weight: bold;">
+                {{ $decision->mention ?? 'Passable' }}</div>
+            <div style="display: table-cell; width: 15%; text-align: right; font-weight: bold;">
+                {{ $classement ?? '-' }}/{{ $total_etudiants ?? '-' }}</div>
         </div>
     </div>
 
@@ -308,8 +326,11 @@
     </div>
 
     <!-- Footer -->
-    <div style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 10px; border-top: 1px solid #ccc; padding-top: 10px;">
-        <p>Avis important : Il ne peut être délivré qu'un seul exemplaire du présent relevé de notes. Aucun duplicata ne sera fourni.</p>
+    <div
+        style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 10px; border-top: 1px solid #ccc; padding-top: 10px;">
+        <p>Avis important : Il ne peut être délivré qu'un seul exemplaire du présent relevé de notes. Aucun duplicata ne
+            sera fourni.</p>
     </div>
 </body>
+
 </html>

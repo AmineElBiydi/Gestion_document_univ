@@ -34,9 +34,9 @@ class PDFService
             'releveNotes.decisionAnnee',
             'conventionStage'
         ]);
-        
+
         $etudiant = $demande->etudiant;
-        
+
         // Generate PDF based on document type
         switch ($demande->type_document) {
             case 'attestation_scolaire':
@@ -64,7 +64,7 @@ class PDFService
     {
         // Get inscription details
         $inscription = $demande->inscription;
-        
+
         // Fallback to latest inscription if not directly associated
         if (!$inscription) {
             $inscription = $etudiant->inscriptions()
@@ -72,9 +72,9 @@ class PDFService
                 ->orderBy('created_at', 'desc')
                 ->first();
         }
-        
+
         $arabic = new Arabic();
-        
+
         // Prepare data for the template
         $data = [
             'etudiant' => $etudiant,
@@ -103,17 +103,17 @@ class PDFService
 
         // Generate PDF using Blade view
         $pdf = Pdf::loadView('pdf.attestation_scolaire', $data);
-        
+
         $filename = 'attestation_scolaire_' . $demande->num_demande . '.pdf';
         $path = storage_path('app/public/documents/' . $filename);
-        
+
         // Ensure directory exists
         if (!file_exists(dirname($path))) {
             mkdir(dirname($path), 0755, true);
         }
-        
+
         $pdf->save($path);
-        
+
         return $path;
     }
 
@@ -125,20 +125,20 @@ class PDFService
         // Use the dedicated AttestationReussitePDF class with Blade view
         $generator = new AttestationReussitePDF();
         $tempPath = $generator->generate($demande);
-        
+
         // Move from temp to public/documents for consistency
         $filename = 'attestation_reussite_' . $demande->num_demande . '.pdf';
         $finalPath = storage_path('app/public/documents/' . $filename);
-        
+
         if (!file_exists(dirname($finalPath))) {
             mkdir(dirname($finalPath), 0755, true);
         }
-        
+
         // Move the file
         if (file_exists($tempPath)) {
             rename($tempPath, $finalPath);
         }
-        
+
         return $finalPath;
     }
 
@@ -150,21 +150,21 @@ class PDFService
         // Get details
         $inscription = $demande->inscription;
         $notes = $inscription ? $inscription->notes()->with('moduleNiveau.module')->get() : collect([]);
-        $decision = $demande->releveNotes && $demande->releveNotes->decisionAnnee 
-            ? $demande->releveNotes->decisionAnnee 
+        $decision = $demande->releveNotes && $demande->releveNotes->decisionAnnee
+            ? $demande->releveNotes->decisionAnnee
             : null;
 
         // Logic for ranking (tempo)
         $classement = '-';
         $totalEtudiants = '-';
-        
+
         if ($decision && $inscription) {
             $query = DecisionAnnee::whereHas('inscription', function ($q) use ($inscription) {
                 $q->where('filiere_id', $inscription->filiere_id)
-                  ->where('niveau_id', $inscription->niveau_id)
-                  ->where('annee_id', $inscription->annee_id);
-            })->where('type_session', $decision->type_session);
-            
+                    ->where('niveau_id', $inscription->niveau_id)
+                    ->where('annee_id', $inscription->annee_id);
+            });
+
             $totalEtudiants = $query->count();
             $classement = $query->where('moyenne_annuelle', '>', $decision->moyenne_annuelle)->count() + 1;
         }
@@ -194,13 +194,13 @@ class PDFService
 
         $filename = 'releve_notes_' . $demande->num_demande . '.pdf';
         $path = storage_path('app/public/documents/' . $filename);
-        
+
         if (!file_exists(dirname($path))) {
             mkdir(dirname($path), 0755, true);
         }
-        
+
         $pdf->save($path);
-        
+
         return $path;
     }
 
@@ -214,12 +214,12 @@ class PDFService
 
         $notesRows = '';
         foreach ($data['notes'] as $note) {
-            $moduleName = $note->moduleNiveau && $note->moduleNiveau->module 
-                ? $note->moduleNiveau->module->nom_module 
+            $moduleName = $note->moduleNiveau && $note->moduleNiveau->module
+                ? $note->moduleNiveau->module->nom_module
                 : 'Module';
             $valeur = $note->note;
             $statut = $note->est_valide ? 'V' : 'NV';
-            
+
             $notesRows .= "<tr>
                 <td>{$moduleName}</td>
                 <td style='text-align: center;'>{$valeur}/20</td>
@@ -306,20 +306,20 @@ HTML;
         // Use the dedicated ConventionStagePDF class with Blade view
         $generator = new ConventionStagePDF();
         $tempPath = $generator->generate($demande);
-        
+
         // Move from temp to public/documents for consistency
         $filename = 'convention_stage_' . $demande->num_demande . '.pdf';
         $finalPath = storage_path('app/public/documents/' . $filename);
-        
+
         if (!file_exists(dirname($finalPath))) {
             mkdir(dirname($finalPath), 0755, true);
         }
-        
+
         // Move the file
         if (file_exists($tempPath)) {
             rename($tempPath, $finalPath);
         }
-        
+
         return $finalPath;
     }
 
@@ -415,11 +415,14 @@ HTML;
             $created = $demande->created_at ? $demande->created_at->format('d/m/Y') : '-';
             $processed = $demande->date_traitement ? \Carbon\Carbon::parse($demande->date_traitement)->format('d/m/Y') : '-';
             $status = ucfirst($demande->status);
-            
+
             // Translate status
-            if ($demande->status == 'validee') $status = 'Validée';
-            if ($demande->status == 'rejetee') $status = 'Refusée';
-            if ($demande->status == 'en_attente') $status = 'En attente';
+            if ($demande->status == 'validee')
+                $status = 'Validée';
+            if ($demande->status == 'rejetee')
+                $status = 'Refusée';
+            if ($demande->status == 'en_attente')
+                $status = 'En attente';
 
             $rows .= "<tr>
                 <td>{$demande->num_demande}</td>
@@ -486,13 +489,13 @@ HTML;
 
         $filename = 'historique_' . now()->format('Y-m-d_His') . '.pdf';
         $path = storage_path('app/temp/' . $filename);
-        
+
         if (!file_exists(dirname($path))) {
             mkdir(dirname($path), 0755, true);
         }
-        
+
         $this->generatePDFFromHTML($html, $path, 'landscape');
-        
+
         return $path;
     }
 
@@ -508,7 +511,7 @@ HTML;
             $options->set('isRemoteEnabled', true);
             $options->set('isFontSubsettingEnabled', true);
             $options->set('defaultFont', 'DejaVu Sans');
-            
+
             $dompdf = new \Dompdf\Dompdf($options);
             $dompdf->loadHtml($html);
             $dompdf->setPaper('A4', $orientation);
