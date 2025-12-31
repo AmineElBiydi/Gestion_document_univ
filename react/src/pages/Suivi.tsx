@@ -103,14 +103,14 @@ export default function Suivi() {
           id: req.id.toString(),
           requestNumber: req.num_demande,
           student: req.etudiant ? {
-             id: req.etudiant.id.toString(),
-             email: req.etudiant.email,
-             apogee: req.etudiant.apogee,
-             cin: req.etudiant.cin,
-             nom: req.etudiant.nom,
-             prenom: req.etudiant.prenom,
-             filiere: req.etudiant.filiere || "Non spécifié",
-             niveau: req.etudiant.niveau || "Non spécifié",
+            id: req.etudiant.id.toString(),
+            email: req.etudiant.email,
+            apogee: req.etudiant.apogee,
+            cin: req.etudiant.cin,
+            nom: req.etudiant.nom,
+            prenom: req.etudiant.prenom,
+            filiere: req.etudiant.filiere || "Non spécifié",
+            niveau: req.etudiant.niveau || "Non spécifié",
           } : undefined,
           studentId: req.etudiant ? req.etudiant.apogee : '',
           documentType: req.type_document as any,
@@ -359,12 +359,6 @@ export default function Suivi() {
                       >
                         <Download className="mr-2 h-4 w-4" />
                         Voir / Télécharger le Relevé
-                      </Button>
-                    )}
-                    {request.status === "validee" && request.documentType !== 'releve_notes' && request.documentUrl && (
-                      <Button variant="default" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        Télécharger le document
                       </Button>
                     )}
                     <Link to={`/reclamation?demande=${request.requestNumber}`}>
