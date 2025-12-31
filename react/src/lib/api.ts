@@ -53,7 +53,7 @@ export const apiEndpoints = {
     api.post('/validate-student', data),
 
   // Get professors list
-  getProfesseurs: () => api.get('/professeurs'),
+  getProfesseurs: (filiereId?: number) => api.get('/professeurs', { params: filiereId ? { filiere_id: filiereId } : {} }),
 
   // Admin authentication
   adminLogin: (credentials: { identifiant: string; password: string }) =>

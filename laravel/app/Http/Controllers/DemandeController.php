@@ -57,8 +57,8 @@ class DemandeController extends Controller
 
         // Step 1: Pattern/Format validation (only for filled fields)
         $emailPatternValid = $email ? (filter_var($email, FILTER_VALIDATE_EMAIL) !== false) : false;
-        $apogeePatternValid = $apogee ? (bool)preg_match('/^\d{6,10}$/', $apogee) : false;
-        $cinPatternValid = $cin ? (bool)preg_match('/^[A-Z]{1,2}\d{4,8}$/i', $cin) : false;
+        $apogeePatternValid = $apogee ? (bool) preg_match('/^\d{6,10}$/', $apogee) : false;
+        $cinPatternValid = $cin ? (bool) preg_match('/^[A-Z]{1,2}\d{4,8}$/i', $cin) : false;
 
         // If any filled field has invalid pattern, return early
         if (($email && !$emailPatternValid) || ($apogee && !$apogeePatternValid) || ($cin && !$cinPatternValid)) {
@@ -92,16 +92,27 @@ class DemandeController extends Controller
         // Step 3: Relationship check - only if all three fields are filled and valid
         $studentExists = false;
         $anneesUniversitaires = [];
-        
+        $filiereId = null;
+
         if ($emailPatternValid && $apogeePatternValid && $cinPatternValid) {
             $student = Etudiant::where('email', $email)
                 ->where('apogee', $apogee)
                 ->where('cin', $cin)
                 ->first();
             $studentExists = $student !== null;
-            
-            // Si l'étudiant existe, récupérer ses années universitaires
+
+            // Si l'étudiant existe, récupérer ses années universitaires et sa filière
             if ($studentExists) {
+                // Get the most recent inscription to determine filiere
+                $latestInscription = $student->inscriptions()
+                    ->with(['anneeUniversitaire', 'filiere'])
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                if ($latestInscription && $latestInscription->filiere) {
+                    $filiereId = $latestInscription->filiere->id;
+                }
+
                 $anneesUniversitaires = $student->inscriptions()
                     ->with('anneeUniversitaire')
                     ->get()
@@ -109,7 +120,7 @@ class DemandeController extends Controller
                         return [
                             'id' => $inscription->id,
                             'libelle' => $inscription->anneeUniversitaire->libelle ?? 'Année inconnue',
-                            'est_active' => (bool)($inscription->anneeUniversitaire->est_active ?? false)
+                            'est_active' => (bool) ($inscription->anneeUniversitaire->est_active ?? false)
                         ];
                     })
                     ->values()
@@ -124,18 +135,27 @@ class DemandeController extends Controller
             'student_valid' => $studentExists,
             'all_valid' => $studentExists,
             'error_type' => $studentExists ? 'none' : 'relationship',
-            'annees_universitaires' => $anneesUniversitaires
+            'annees_universitaires' => $anneesUniversitaires,
+            'filiere_id' => $filiereId
         ]);
     }
 
     /**
      * Get list of professors for convention stage form
+     * Optionally filtered by filiere
      */
-    public function getProfesseurs()
+    public function getProfesseurs(Request $request)
     {
-        $professeurs = Professeur::select('id', 'nom', 'prenom', 'email', 'specialite')
-            ->orderBy('nom')
-            ->get();
+        $query = Professeur::select('id', 'nom', 'prenom', 'email', 'specialite');
+
+        // Filter by filiere if provided (using many-to-many relationship)
+        if ($request->has('filiere_id') && $request->filiere_id) {
+            $query->whereHas('filieres', function ($q) use ($request) {
+                $q->where('filieres.id', $request->filiere_id);
+            });
+        }
+
+        $professeurs = $query->orderBy('nom')->get();
 
         return response()->json([
             'success' => true,
@@ -180,13 +200,13 @@ class DemandeController extends Controller
 
             // Get inscription_id - either from request or find the most recent one
             $inscriptionId = $request->input('inscription_id', null);
-            
+
             if (!$inscriptionId) {
                 // Automatically find the student's most recent inscription
                 $inscription = Inscription::where('etudiant_id', $etudiant->id)
                     ->orderBy('created_at', 'desc')
                     ->first();
-                
+
                 if ($inscription) {
                     $inscriptionId = $inscription->id;
                 }
@@ -220,10 +240,10 @@ class DemandeController extends Controller
 
             // Envoyer email de confirmation
             $this->emailService->envoyerConfirmationDemande($demande);
-            
+
             /** @var \Carbon\Carbon $dateDemande */
             $dateDemande = $demande->date_demande;
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Votre demande a été enregistrée avec succès.',
@@ -273,13 +293,13 @@ class DemandeController extends Controller
                 // Accept text values from frontend, try to find matching decision_annee_id
                 // If inscription exists, link to decision. Otherwise create without decision.
                 $decisionAnneeId = null;
-                
+
                 if ($demande->inscription_id) {
                     // Try to find a decision for this inscription
                     $decisionAnnee = DecisionAnnee::where('inscription_id', $demande->inscription_id)
                         ->orderBy('created_at', 'desc')
                         ->first();
-                    
+
                     if ($decisionAnnee) {
                         $decisionAnneeId = $decisionAnnee->id;
                     }
@@ -295,13 +315,13 @@ class DemandeController extends Controller
                 // Accept text values from frontend, try to find matching decision_annee_id
                 // If inscription exists, link to decision. Otherwise create without decision.
                 $decisionAnneeId = null;
-                
+
                 if ($demande->inscription_id) {
                     // Try to find a decision for this inscription
                     $decisionAnnee = DecisionAnnee::where('inscription_id', $demande->inscription_id)
                         ->orderBy('created_at', 'desc')
                         ->first();
-                    
+
                     if ($decisionAnnee) {
                         $decisionAnneeId = $decisionAnnee->id;
                     }
@@ -315,29 +335,54 @@ class DemandeController extends Controller
 
             case 'convention_stage':
                 $validated = $request->validate([
+                    // Required fields
                     'date_debut' => 'required|date',
                     'date_fin' => 'required|date|after:date_debut',
                     'entreprise' => 'required|string',
+                    'secteur_entreprise' => 'required|string',
                     'adresse_entreprise' => 'required|string',
-                    'email_encadrant' => 'required|email',
-                    'telephone_encadrant' => 'required|string',
-                    'encadrant_entreprise' => 'required|string',
-                    'encadrant_pedagogique_id' => 'nullable|exists:professeurs,id',
-                    'fonction_encadrant' => 'required|string',
+                    'ville_entreprise' => 'required|string',
+                    'encadrant_pedagogique_id' => 'required|exists:professeurs,id',
                     'sujet' => 'required|string',
+                    // Optional fields
+                    'telephone_entreprise' => 'nullable|string',
+                    'email_entreprise' => 'nullable|email',
+                    'representant_entreprise' => 'nullable|string',
+                    'fonction_representant' => 'nullable|string',
+                    'encadrant_entreprise' => 'nullable|string',
+                    'fonction_encadrant' => 'nullable|string',
+                    'telephone_encadrant' => 'nullable|string',
+                    'email_encadrant' => 'nullable|email',
                 ]);
-                
+
+                // Fill empty optional fields with dots
+                $dots = '...................................';
+                $validated['telephone_entreprise'] = $validated['telephone_entreprise'] ?? $dots;
+                $validated['email_entreprise'] = $validated['email_entreprise'] ?? $dots;
+                $validated['representant_entreprise'] = $validated['representant_entreprise'] ?? $dots;
+                $validated['fonction_representant'] = $validated['fonction_representant'] ?? $dots;
+                $validated['encadrant_entreprise'] = $validated['encadrant_entreprise'] ?? $dots;
+                $validated['fonction_encadrant'] = $validated['fonction_encadrant'] ?? $dots;
+                $validated['telephone_encadrant'] = $validated['telephone_encadrant'] ?? $dots;
+                $validated['email_encadrant'] = $validated['email_encadrant'] ?? $dots;
+
                 ConventionStage::create([
                     'demande_id' => $demande->id,
                     'date_debut' => $validated['date_debut'],
                     'date_fin' => $validated['date_fin'],
                     'entreprise' => $validated['entreprise'],
+                    'secteur_entreprise' => $validated['secteur_entreprise'],
+                    'telephone_entreprise' => $validated['telephone_entreprise'],
+                    'email_entreprise' => $validated['email_entreprise'],
                     'adresse_entreprise' => $validated['adresse_entreprise'],
-                    'email_encadrant' => $validated['email_encadrant'],
-                    'telephone_encadrant' => $validated['telephone_encadrant'],
+                    'ville_entreprise' => $validated['ville_entreprise'],
+                    'representant_entreprise' => $validated['representant_entreprise'],
+                    'fonction_representant' => $validated['fonction_representant'],
                     'encadrant_entreprise' => $validated['encadrant_entreprise'],
-                    'encadrant_pedagogique_id' => $validated['encadrant_pedagogique_id'] ?? null,
                     'fonction_encadrant' => $validated['fonction_encadrant'],
+                    'telephone_encadrant' => $validated['telephone_encadrant'],
+                    'email_encadrant' => $validated['email_encadrant'],
+                    'encadrant_pedagogique_id' => $validated['encadrant_pedagogique_id'],
                     'sujet' => $validated['sujet'],
                 ]);
                 break;
@@ -359,7 +404,7 @@ class DemandeController extends Controller
         try {
             // Trouver la demande correspondante
             $demande = Demande::where('num_demande', $validated['num_demande'])->first();
-            
+
             if (!$demande) {
                 return response()->json([
                     'success' => false,
@@ -373,7 +418,7 @@ class DemandeController extends Controller
                 'etudiant_id' => $demande->etudiant_id,
                 'type' => $validated['type'],
                 'description' => $validated['description'],
-                'piece_jointe_path' => $request->hasFile('piece_jointe') ? 
+                'piece_jointe_path' => $request->hasFile('piece_jointe') ?
                     $request->file('piece_jointe')->store('reclamations', 'public') : null,
             ]);
 
@@ -426,9 +471,9 @@ class DemandeController extends Controller
                 'inscription.anneeUniversitaire',
                 'etudiant'
             ])
-            ->where('num_demande', 'like', '%' . $validated['num_demande'] . '%')
-            ->orderBy('created_at', 'desc')
-            ->get();
+                ->where('num_demande', 'like', '%' . $validated['num_demande'] . '%')
+                ->orderBy('created_at', 'desc')
+                ->get();
 
             return response()->json([
                 'success' => true,
@@ -477,7 +522,7 @@ class DemandeController extends Controller
         // Transformer les données pour le frontend
         $demandesTransformees = $demandes->map(function ($demande) use ($etudiant) {
             $details = [];
-            
+
             switch ($demande->type_document) {
                 case 'attestation_scolaire':
                     if ($demande->attestationScolaire && $demande->inscription) {
@@ -507,9 +552,9 @@ class DemandeController extends Controller
                     if ($demande->releveNotes && $demande->releveNotes->decisionAnnee) {
                         $decision = $demande->releveNotes->decisionAnnee;
                         $inscription = $decision->inscription;
-                        
+
                         // Get notes with modules
-                        $notes = $inscription->notes()->with('moduleNiveau.module')->get()->map(function($note) {
+                        $notes = $inscription->notes()->with('moduleNiveau.module')->get()->map(function ($note) {
                             return [
                                 'module' => $note->moduleNiveau->module->nom_module ?? 'Module inconnu',
                                 'note' => $note->note,
@@ -535,7 +580,7 @@ class DemandeController extends Controller
                             'entreprise' => $demande->conventionStage->entreprise,
                             'date_debut' => $demande->conventionStage->date_debut?->format('Y-m-d'),
                             'date_fin' => $demande->conventionStage->date_fin?->format('Y-m-d'),
-                            'encadrant_pedagogique' => $demande->conventionStage->encadrantPedagogique 
+                            'encadrant_pedagogique' => $demande->conventionStage->encadrantPedagogique
                                 ? $demande->conventionStage->encadrantPedagogique->nom . ' ' . $demande->conventionStage->encadrantPedagogique->prenom
                                 : null,
                         ];
@@ -589,10 +634,10 @@ class DemandeController extends Controller
         }
 
         $pdfService = app(\App\Services\PdfService::class);
-        
+
         try {
             $pdfPath = null;
-            
+
             switch ($demande->type_document) {
                 case 'releve_notes':
                     $pdfPath = $pdfService->genererReleveNotes($demande);
@@ -622,7 +667,7 @@ class DemandeController extends Controller
                 $filename,
                 ['Content-Type' => 'application/pdf']
             );
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

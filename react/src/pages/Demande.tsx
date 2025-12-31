@@ -61,6 +61,8 @@ export default function Demande() {
   const [selectedAction, setSelectedAction] = useState<FormAction | "">("");
   const [details, setDetails] = useState<Record<string, string>>({});
   const [studentAnneesUniversitaires, setStudentAnneesUniversitaires] = useState<{ id: number, libelle: string, est_active: boolean }[]>([]);
+  const [studentFiliereId, setStudentFiliereId] = useState<number | null>(null);
+  const [professeurs, setProfesseurs] = useState<{ id: number, nom: string, prenom: string }[]>([]);
 
   // Reclamation data
   const [requestNumber, setRequestNumber] = useState("");
@@ -113,6 +115,10 @@ export default function Demande() {
         setIdentificationError("");
         // Récupérer les années universitaires de l'étudiant
         setStudentAnneesUniversitaires(validation.annees_universitaires || []);
+        // Récupérer la filière de l'étudiant pour charger les professeurs
+        if (validation.filiere_id) {
+          setStudentFiliereId(validation.filiere_id);
+        }
       } else {
         setIsIdentificationValid(false);
         setIsIdentificationLocked(false);
@@ -152,6 +158,26 @@ export default function Demande() {
       setHasFilledDocumentDetails(false);
     }
   };
+
+  // Load professors when convention_stage is selected
+  useEffect(() => {
+    if (selectedAction === "convention_stage") {
+      const loadProfesseurs = async () => {
+        try {
+          // Load professors filtered by filiere if available, otherwise load all
+          const response = await apiEndpoints.getProfesseurs(studentFiliereId ?? undefined);
+          if (response.data.success) {
+            setProfesseurs(response.data.data);
+          }
+        } catch (error) {
+          console.error("Error loading professeurs:", error);
+          // Set empty array on error to prevent blank page
+          setProfesseurs([]);
+        }
+      };
+      loadProfesseurs();
+    }
+  }, [selectedAction, studentFiliereId]);
 
   const handleActionChange = (value: FormAction) => {
     setSelectedAction(value);
@@ -195,7 +221,9 @@ export default function Demande() {
       case "releve_notes":
         return details.annee;
       case "convention_stage":
-        return details.entreprise && details.adresse && details.dateDebut && details.dateFin && details.encadrant && details.sujet;
+        return details.entreprise && details.secteur && details.adresse && details.ville &&
+          details.encadrantPedagogique &&
+          details.dateDebut && details.dateFin && details.sujet;
       case "reclamation":
         return requestNumber && reclamationType && reclamationDescription;
       default:
@@ -262,12 +290,18 @@ export default function Demande() {
             requestData.date_debut = details.dateDebut;
             requestData.date_fin = details.dateFin;
             requestData.entreprise = details.entreprise;
+            requestData.secteur_entreprise = details.secteur;
+            requestData.telephone_entreprise = details.telephoneEntreprise || '';
+            requestData.email_entreprise = details.emailEntreprise || '';
             requestData.adresse_entreprise = details.adresse;
-            requestData.email_encadrant = "encadrant@entreprise.com"; // Default value
-            requestData.telephone_encadrant = "0600000000"; // Default value
-            requestData.encadrant_entreprise = details.encadrant;
-            requestData.encadrant_pedagogique = "Prof. Université"; // Default value
-            requestData.fonction_encadrant = "Encadrant technique"; // Default value
+            requestData.ville_entreprise = details.ville;
+            requestData.representant_entreprise = details.representant || '';
+            requestData.fonction_representant = details.fonctionRepresentant || '';
+            requestData.encadrant_entreprise = details.encadrantEntreprise || '';
+            requestData.fonction_encadrant = details.fonctionEncadrant || '';
+            requestData.telephone_encadrant = details.telephoneEncadrant || '';
+            requestData.email_encadrant = details.emailEncadrant || '';
+            requestData.encadrant_pedagogique_id = details.encadrantPedagogique;
             requestData.sujet = details.sujet;
             break;
         }
@@ -522,81 +556,257 @@ export default function Demande() {
       ),
       convention_stage: (
         <>
-          <div className="space-y-2">
-            <Label htmlFor="entreprise">Entreprise d'accueil *</Label>
-            <Input
-              id="entreprise"
-              value={details.entreprise || ""}
-              onChange={(e) => {
-                setDetails({ ...details, entreprise: e.target.value });
-                setHasFilledDocumentDetails(true);
-              }}
-              placeholder="Nom de l'entreprise"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="adresse">Adresse de l'entreprise *</Label>
-            <Textarea
-              id="adresse"
-              value={details.adresse || ""}
-              onChange={(e) => {
-                setDetails({ ...details, adresse: e.target.value });
-                setHasFilledDocumentDetails(true);
-              }}
-              placeholder="Adresse complète"
-              rows={2}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+          {/* Informations sur l'entreprise */}
+          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+            <h4 className="font-semibold text-sm">Informations sur l'entreprise</h4>
+
             <div className="space-y-2">
-              <Label htmlFor="dateDebut">Date de début *</Label>
+              <Label htmlFor="entreprise">Raison sociale de l'entreprise *</Label>
               <Input
-                id="dateDebut"
-                type="date"
-                value={details.dateDebut || ""}
+                id="entreprise"
+                value={details.entreprise || ""}
                 onChange={(e) => {
-                  setDetails({ ...details, dateDebut: e.target.value });
+                  setDetails({ ...details, entreprise: e.target.value });
                   setHasFilledDocumentDetails(true);
                 }}
+                placeholder="Nom de l'entreprise"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="dateFin">Date de fin *</Label>
+              <Label htmlFor="secteur">Secteur de l'entreprise *</Label>
               <Input
-                id="dateFin"
-                type="date"
-                value={details.dateFin || ""}
+                id="secteur"
+                value={details.secteur || ""}
                 onChange={(e) => {
-                  setDetails({ ...details, dateFin: e.target.value });
+                  setDetails({ ...details, secteur: e.target.value });
                   setHasFilledDocumentDetails(true);
                 }}
+                placeholder="Ex: Informatique, Finance, Industrie..."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="telephoneEntreprise">Téléphone de l'entreprise</Label>
+                <Input
+                  id="telephoneEntreprise"
+                  value={details.telephoneEntreprise || ""}
+                  onChange={(e) => {
+                    setDetails({ ...details, telephoneEntreprise: e.target.value });
+                    setHasFilledDocumentDetails(true);
+                  }}
+                  placeholder="+212 5XX XX XX XX"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emailEntreprise">Email de l'entreprise</Label>
+                <Input
+                  id="emailEntreprise"
+                  type="email"
+                  value={details.emailEntreprise || ""}
+                  onChange={(e) => {
+                    setDetails({ ...details, emailEntreprise: e.target.value });
+                    setHasFilledDocumentDetails(true);
+                  }}
+                  placeholder="contact@entreprise.com"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="adresse">Adresse de l'entreprise *</Label>
+              <Textarea
+                id="adresse"
+                value={details.adresse || ""}
+                onChange={(e) => {
+                  setDetails({ ...details, adresse: e.target.value });
+                  setHasFilledDocumentDetails(true);
+                }}
+                placeholder="Adresse complète"
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ville">Ville de l'entreprise *</Label>
+              <Input
+                id="ville"
+                value={details.ville || ""}
+                onChange={(e) => {
+                  setDetails({ ...details, ville: e.target.value });
+                  setHasFilledDocumentDetails(true);
+                }}
+                placeholder="Ex: Tétouan, Casablanca..."
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="encadrant">Nom de l'encadrant académique *</Label>
-            <Input
-              id="encadrant"
-              value={details.encadrant || ""}
-              onChange={(e) => {
-                setDetails({ ...details, encadrant: e.target.value });
-                setHasFilledDocumentDetails(true);
-              }}
-              placeholder="Nom et prénom"
-            />
+
+          {/* Représentant de l'entreprise */}
+          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+            <h4 className="font-semibold text-sm">Représentant de l'entreprise</h4>
+
+            <div className="space-y-2">
+              <Label htmlFor="representant">Nom du représentant de l'entreprise</Label>
+              <Input
+                id="representant"
+                value={details.representant || ""}
+                onChange={(e) => {
+                  setDetails({ ...details, representant: e.target.value });
+                  setHasFilledDocumentDetails(true);
+                }}
+                placeholder="Nom et prénom"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fonctionRepresentant">Fonction du représentant</Label>
+              <Input
+                id="fonctionRepresentant"
+                value={details.fonctionRepresentant || ""}
+                onChange={(e) => {
+                  setDetails({ ...details, fonctionRepresentant: e.target.value });
+                  setHasFilledDocumentDetails(true);
+                }}
+                placeholder="Ex: Directeur Général, Gérant..."
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="sujet">Sujet du stage *</Label>
-            <Textarea
-              id="sujet"
-              value={details.sujet || ""}
-              onChange={(e) => {
-                setDetails({ ...details, sujet: e.target.value });
-                setHasFilledDocumentDetails(true);
-              }}
-              placeholder="Décrivez brièvement le sujet du stage"
-              rows={3}
-            />
+
+          {/* Encadrant de l'entreprise */}
+          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+            <h4 className="font-semibold text-sm">Encadrant de l'entreprise</h4>
+
+            <div className="space-y-2">
+              <Label htmlFor="encadrantEntreprise">Nom de l'encadrant de l'entreprise</Label>
+              <Input
+                id="encadrantEntreprise"
+                value={details.encadrantEntreprise || ""}
+                onChange={(e) => {
+                  setDetails({ ...details, encadrantEntreprise: e.target.value });
+                  setHasFilledDocumentDetails(true);
+                }}
+                placeholder="Nom et prénom"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fonctionEncadrant">Fonction de l'encadrant de l'entreprise</Label>
+              <Input
+                id="fonctionEncadrant"
+                value={details.fonctionEncadrant || ""}
+                onChange={(e) => {
+                  setDetails({ ...details, fonctionEncadrant: e.target.value });
+                  setHasFilledDocumentDetails(true);
+                }}
+                placeholder="Ex: Chef de projet, Responsable technique..."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="telephoneEncadrant">Téléphone de l'encadrant</Label>
+                <Input
+                  id="telephoneEncadrant"
+                  value={details.telephoneEncadrant || ""}
+                  onChange={(e) => {
+                    setDetails({ ...details, telephoneEncadrant: e.target.value });
+                    setHasFilledDocumentDetails(true);
+                  }}
+                  placeholder="+212 6XX XX XX XX"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emailEncadrant">Email de l'encadrant</Label>
+                <Input
+                  id="emailEncadrant"
+                  type="email"
+                  value={details.emailEncadrant || ""}
+                  onChange={(e) => {
+                    setDetails({ ...details, emailEncadrant: e.target.value });
+                    setHasFilledDocumentDetails(true);
+                  }}
+                  placeholder="encadrant@entreprise.com"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Encadrant académique */}
+          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+            <h4 className="font-semibold text-sm">Encadrant académique</h4>
+
+            <div className="space-y-2">
+              <Label htmlFor="encadrantPedagogique">Encadrant de l'ENSA (à sélectionner) *</Label>
+              <Select
+                value={details.encadrantPedagogique || ""}
+                onValueChange={(v) => {
+                  setDetails({ ...details, encadrantPedagogique: v });
+                  setHasFilledDocumentDetails(true);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez un professeur" />
+                </SelectTrigger>
+                <SelectContent>
+                  {professeurs.length > 0 ? (
+                    professeurs.map((prof) => (
+                      <SelectItem key={prof.id} value={prof.id.toString()}>
+                        Prof. {prof.nom} {prof.prenom}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-professor" disabled>Aucun professeur disponible</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Informations sur le stage */}
+          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+            <h4 className="font-semibold text-sm">Informations sur le stage</h4>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dateDebut">Stage du (date de début) *</Label>
+                <Input
+                  id="dateDebut"
+                  type="date"
+                  value={details.dateDebut || ""}
+                  onChange={(e) => {
+                    setDetails({ ...details, dateDebut: e.target.value });
+                    setHasFilledDocumentDetails(true);
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dateFin">Stage au (date de fin) *</Label>
+                <Input
+                  id="dateFin"
+                  type="date"
+                  value={details.dateFin || ""}
+                  onChange={(e) => {
+                    setDetails({ ...details, dateFin: e.target.value });
+                    setHasFilledDocumentDetails(true);
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sujet">Sujet du stage *</Label>
+              <Textarea
+                id="sujet"
+                value={details.sujet || ""}
+                onChange={(e) => {
+                  setDetails({ ...details, sujet: e.target.value });
+                  setHasFilledDocumentDetails(true);
+                }}
+                placeholder="Décrivez brièvement le sujet du stage"
+                rows={3}
+              />
+            </div>
           </div>
         </>
       ),

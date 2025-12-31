@@ -19,52 +19,78 @@ class ModuleNiveauSeeder extends Seeder
 
         $modulesNiveau = [];
 
-        // Cycle Préparatoire - CP1
+        // Cycle Préparatoire - CP1 (Semestres 1 et 2)
         $cpModules = [
-            ['MATH101', 2.0],
-            ['MATH102', 1.5],
-            ['PHYS101', 1.5],
-            ['INFO101', 1.5],
-            ['LANG101', 1.0],
-            ['COMM101', 1.0]
+            // Semestre 1
+            ['ANL1', 1.0],
+            ['ALG1', 1.0],
+            ['PHY1', 1.0],
+            ['MECA1', 1.0],
+            ['INFO1', 1.0],
+            ['LC1', 1.0],
+            // Semestre 2
+            ['ANL2', 1.0],
+            ['ALG2', 1.0],
+            ['PHY2', 1.0],
+            ['CHIM', 1.0],
+            ['MAO', 1.0],
+            ['LC2', 1.0]
         ];
         foreach ($cpModules as [$code, $coef]) {
             $modulesNiveau[] = [
                 'module_id' => $modules[$code]->id,
-                'filiere_id' => $filieres['CP']->id,
+                'filiere_id' => $filieres['2AP']->id,
                 'niveau_id' => $niveaux['CP1']->id,
                 'coefficient' => $coef,
                 'est_obligatoire' => true,
             ];
         }
 
-        // Cycle Préparatoire - CP2
+        // Cycle Préparatoire - CP2 (Semestres 3 et 4)
         $cp2Modules = [
-            ['MATH201', 2.0],
-            ['MATH202', 1.5],
-            ['PHYS201', 1.5],
-            ['INFO201', 1.5],
-            ['ELEC101', 1.5],
-            ['LANG201', 1.0]
+            // Semestre 3
+            ['ALG3', 1.0],
+            ['ANL3', 1.0],
+            ['PHY3', 1.0],
+            ['MECA3', 1.0],
+            ['INFO2', 1.0],
+            ['LC3', 1.0],
+            // Semestre 4
+            ['ANL4', 1.0],
+            ['MAPP', 1.0],
+            ['PHY4', 1.0],
+            ['ELEC', 1.0],
+            ['MGMT', 1.0],
+            ['LC4', 1.0]
         ];
         foreach ($cp2Modules as [$code, $coef]) {
             $modulesNiveau[] = [
                 'module_id' => $modules[$code]->id,
-                'filiere_id' => $filieres['CP']->id,
+                'filiere_id' => $filieres['2AP']->id,
                 'niveau_id' => $niveaux['CP2']->id,
                 'coefficient' => $coef,
                 'est_obligatoire' => true,
             ];
         }
 
-        // Génie Informatique - CI1
+        // Génie Informatique - CI1 (Semestres 5 et 6)
         $giCI1Modules = [
-            ['GI301', 2.0],
-            ['GI302', 2.0],
-            ['GI303', 1.5],
-            ['GI304', 1.5],
-            ['GI305', 1.5],
-            ['GI306', 1.5]
+            // Semestre 5
+            ['TGRO', 1.0],
+            ['ARCHI', 1.0],
+            ['BDR', 1.0],
+            ['RESX1', 1.0],
+            ['SDC', 1.0],
+            ['LE1', 1.0],
+            // Semestre 6
+            ['DSKL', 1.0],
+            ['SYSEXP', 1.0],
+            ['MOO', 1.0],
+            ['TLC', 1.0],
+            ['DEVWEB', 1.0],
+            ['POOJAVA', 1.0],
+            ['LE2', 1.0],
+            ['CASS', 1.0]
         ];
         foreach ($giCI1Modules as [$code, $coef]) {
             $modulesNiveau[] = [
@@ -76,14 +102,24 @@ class ModuleNiveauSeeder extends Seeder
             ];
         }
 
-        // Génie Informatique - CI2
+        // Génie Informatique - CI2 (Semestres 7 et 8)
         $giCI2Modules = [
-            ['GI401', 2.0],
-            ['GI402', 2.0],
-            ['GI403', 1.5],
-            ['GI404', 1.5],
-            ['GI405', 1.0],
-            ['GI406', 1.5]
+            // Semestre 7
+            ['ABDR', 1.0],
+            ['DEVWEBA', 1.0],
+            ['RESXA', 1.0],
+            ['MGL', 1.0],
+            ['DOTNET', 1.0],
+            ['LE3', 1.0],
+            ['PI', 1.0],
+            // Semestre 8
+            ['ML', 1.0],
+            ['ASSS', 1.0],
+            ['RESX2', 1.0],
+            ['JEE', 1.0],
+            ['MSDM', 1.0],
+            ['LE4', 1.0],
+            ['GPE', 1.0]
         ];
         foreach ($giCI2Modules as [$code, $coef]) {
             $modulesNiveau[] = [
@@ -95,146 +131,21 @@ class ModuleNiveauSeeder extends Seeder
             ];
         }
 
-        // Génie Informatique - CI3
+        // Génie Informatique - CI3 (Semestre 9)
         $giCI3Modules = [
-            ['GI501', 1.5],
-            ['GI502', 2.0],
-            ['GI503', 1.0],
-            ['GI504', 1.5],
-            ['GI505', 3.0]
+            ['FTW', 1.0],
+            ['BDA', 1.0],
+            ['ERP', 1.0],
+            ['USI', 1.0],
+            ['DL', 1.0],
+            ['LE5', 1.0],
+            ['EMPSKL', 1.0]
         ];
         foreach ($giCI3Modules as [$code, $coef]) {
             $modulesNiveau[] = [
                 'module_id' => $modules[$code]->id,
                 'filiere_id' => $filieres['GI']->id,
                 'niveau_id' => $niveaux['CI3']->id,
-                'coefficient' => $coef,
-                'est_obligatoire' => true,
-            ];
-        }
-
-        // Génie Système Embarqué et Cyber Security - CI1
-        $gsecsCI1Modules = [
-            ['GSECS301', 2.0],
-            ['GSECS302', 2.0],
-            ['GSECS303', 2.0],
-            ['GSECS304', 1.5],
-            ['GSECS305', 1.5]
-        ];
-        foreach ($gsecsCI1Modules as [$code, $coef]) {
-            $modulesNiveau[] = [
-                'module_id' => $modules[$code]->id,
-                'filiere_id' => $filieres['GSECS']->id,
-                'niveau_id' => $niveaux['CI1']->id,
-                'coefficient' => $coef,
-                'est_obligatoire' => true,
-            ];
-        }
-
-        // Génie Mécatronique - CI1
-        $gmCI1Modules = [
-            ['GM301', 2.0],
-            ['GM302', 1.5],
-            ['GM303', 1.5],
-            ['GM304', 2.0],
-            ['GM305', 1.5]
-        ];
-        foreach ($gmCI1Modules as [$code, $coef]) {
-            $modulesNiveau[] = [
-                'module_id' => $modules[$code]->id,
-                'filiere_id' => $filieres['GM']->id,
-                'niveau_id' => $niveaux['CI1']->id,
-                'coefficient' => $coef,
-                'est_obligatoire' => true,
-            ];
-        }
-
-        // Génie Civil - CI1
-        $gcCI1Modules = [
-            ['GC301', 2.0],
-            ['GC302', 2.0],
-            ['GC303', 1.5],
-            ['GC304', 1.5],
-            ['GC305', 1.5]
-        ];
-        foreach ($gcCI1Modules as [$code, $coef]) {
-            $modulesNiveau[] = [
-                'module_id' => $modules[$code]->id,
-                'filiere_id' => $filieres['GC']->id,
-                'niveau_id' => $niveaux['CI1']->id,
-                'coefficient' => $coef,
-                'est_obligatoire' => true,
-            ];
-        }
-
-        // Big Data et IA - CI1
-        $bdiaCI1Modules = [
-            ['BDIA301', 2.0],
-            ['BDIA302', 2.0],
-            ['BDIA303', 2.0],
-            ['BDIA304', 1.5],
-            ['BDIA305', 1.5],
-            ['BDIA306', 1.0]
-        ];
-        foreach ($bdiaCI1Modules as [$code, $coef]) {
-            $modulesNiveau[] = [
-                'module_id' => $modules[$code]->id,
-                'filiere_id' => $filieres['BDIA']->id,
-                'niveau_id' => $niveaux['CI1']->id,
-                'coefficient' => $coef,
-                'est_obligatoire' => true,
-            ];
-        }
-
-        // Big Data et IA - CI2
-        $bdiaCI2Modules = [
-            ['BDIA401', 2.0],
-            ['BDIA402', 2.0],
-            ['BDIA403', 1.5],
-            ['BDIA404', 1.5],
-            ['BDIA405', 1.0]
-        ];
-        foreach ($bdiaCI2Modules as [$code, $coef]) {
-            $modulesNiveau[] = [
-                'module_id' => $modules[$code]->id,
-                'filiere_id' => $filieres['BDIA']->id,
-                'niveau_id' => $niveaux['CI2']->id,
-                'coefficient' => $coef,
-                'est_obligatoire' => true,
-            ];
-        }
-
-        // Supply Chain Management - CI1
-        $scmCI1Modules = [
-            ['SCM301', 2.0],
-            ['SCM302', 2.0],
-            ['SCM303', 1.5],
-            ['SCM304', 1.5],
-            ['SCM305', 1.5]
-        ];
-        foreach ($scmCI1Modules as [$code, $coef]) {
-            $modulesNiveau[] = [
-                'module_id' => $modules[$code]->id,
-                'filiere_id' => $filieres['SCM']->id,
-                'niveau_id' => $niveaux['CI1']->id,
-                'coefficient' => $coef,
-                'est_obligatoire' => true,
-            ];
-        }
-
-        // Supply Chain Management - CI2
-        $scmCI2Modules = [
-            ['SCM401', 2.0],
-            ['SCM402', 1.5],
-            ['SCM403', 1.5],
-            ['SCM404', 1.0],
-            ['SCM405', 1.5]
-        ];
-        foreach ($scmCI2Modules as [$code, $coef]) {
-            $modulesNiveau[] = [
-                'module_id' => $modules[$code]->id,
-                'filiere_id' => $filieres['SCM']->id,
-                'niveau_id' => $niveaux['CI2']->id,
                 'coefficient' => $coef,
                 'est_obligatoire' => true,
             ];

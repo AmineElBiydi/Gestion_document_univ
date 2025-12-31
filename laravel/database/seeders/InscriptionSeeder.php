@@ -20,41 +20,41 @@ class InscriptionSeeder extends Seeder
 
         $inscriptions = [];
 
-        // Current year (2024-2025) inscriptions
-        $currentYear = $annees['2024-2025']->id;
+        // Historical inscriptions for Ismail, Abdellatif, and Amine (started in 2022)
+        $historicalStudents = ['22050001', '22050002', '22050003']; // Ismail, Abdellatif, Amine
 
-        // CP1 Students
-        $cp1Students = ['12345678', '87654321', '11223344', '55667788'];
-        foreach ($cp1Students as $apogee) {
+        // 2022-2023: CP1 (2AP1)
+        $year2022 = $annees['2022-2023']->id;
+        foreach ($historicalStudents as $apogee) {
             $inscriptions[] = [
                 'etudiant_id' => $etudiants[$apogee]->id,
-                'annee_id' => $currentYear,
-                'filiere_id' => $filieres['CP']->id,
+                'annee_id' => $year2022,
+                'filiere_id' => $filieres['2AP']->id,
                 'niveau_id' => $niveaux['CP1']->id,
-                'date_inscription' => '2024-09-15',
+                'date_inscription' => '2022-09-15',
                 'statut' => 'inscrit',
             ];
         }
 
-        // CP2 Students
-        $cp2Students = ['23456789', '34567890', '45678901'];
-        foreach ($cp2Students as $apogee) {
+        // 2023-2024: CP2 (2AP2)
+        $year2023 = $annees['2023-2024']->id;
+        foreach ($historicalStudents as $apogee) {
             $inscriptions[] = [
                 'etudiant_id' => $etudiants[$apogee]->id,
-                'annee_id' => $currentYear,
-                'filiere_id' => $filieres['CP']->id,
+                'annee_id' => $year2023,
+                'filiere_id' => $filieres['2AP']->id,
                 'niveau_id' => $niveaux['CP2']->id,
-                'date_inscription' => '2024-09-15',
+                'date_inscription' => '2023-09-15',
                 'statut' => 'inscrit',
             ];
         }
 
-        // GI - CI1 Students
-        $giCI1Students = ['56789012', '78901234', '24681357'];
-        foreach ($giCI1Students as $apogee) {
+        // 2024-2025: CI1 (GI1)
+        $year2024 = $annees['2024-2025']->id;
+        foreach ($historicalStudents as $apogee) {
             $inscriptions[] = [
                 'etudiant_id' => $etudiants[$apogee]->id,
-                'annee_id' => $currentYear,
+                'annee_id' => $year2024,
                 'filiere_id' => $filieres['GI']->id,
                 'niveau_id' => $niveaux['CI1']->id,
                 'date_inscription' => '2024-09-15',
@@ -62,63 +62,16 @@ class InscriptionSeeder extends Seeder
             ];
         }
 
-        // GI - CI2 Students
-        $giCI2Students = ['89012345', '90123456', '36925814'];
-        foreach ($giCI2Students as $apogee) {
+        // 2025-2026: CI2 (GI2) - Current year
+        $currentYear = $annees['2025-2026']->id;
+        foreach ($historicalStudents as $apogee) {
             $inscriptions[] = [
                 'etudiant_id' => $etudiants[$apogee]->id,
                 'annee_id' => $currentYear,
                 'filiere_id' => $filieres['GI']->id,
                 'niveau_id' => $niveaux['CI2']->id,
-                'date_inscription' => '2024-09-15',
+                'date_inscription' => '2025-09-15',
                 'statut' => 'inscrit',
-            ];
-        }
-
-        // GI - CI3 Students
-        $giCI3Students = ['01234567', '14725836'];
-        foreach ($giCI3Students as $apogee) {
-            $inscriptions[] = [
-                'etudiant_id' => $etudiants[$apogee]->id,
-                'annee_id' => $currentYear,
-                'filiere_id' => $filieres['GI']->id,
-                'niveau_id' => $niveaux['CI3']->id,
-                'date_inscription' => '2024-09-15',
-                'statut' => 'inscrit',
-            ];
-        }
-
-        // GSECS - CI1 Students
-        $gsecsCI1Students = ['25836914', '36914725'];
-        foreach ($gsecsCI1Students as $apogee) {
-            $inscriptions[] = [
-                'etudiant_id' => $etudiants[$apogee]->id,
-                'annee_id' => $currentYear,
-                'filiere_id' => $filieres['GSECS']->id,
-                'niveau_id' => $niveaux['CI1']->id,
-                'date_inscription' => '2024-09-15',
-                'statut' => 'inscrit',
-            ];
-        }
-
-        // Previous year (2023-2024) inscriptions for graduated students
-        $previousYear = $annees['2023-2024']->id;
-
-        // Graduated students
-        $graduatedStudents = [
-            ['99887766', 'GI', 'CI3'],
-            ['67890123', 'GI', 'CI3'],
-            ['13579246', 'GSECS', 'CI3'],
-        ];
-
-        foreach ($graduatedStudents as [$apogee, $filiereCode, $niveauCode]) {
-            $inscriptions[] = [
-                'etudiant_id' => $etudiants[$apogee]->id,
-                'annee_id' => $previousYear,
-                'filiere_id' => $filieres[$filiereCode]->id,
-                'niveau_id' => $niveaux[$niveauCode]->id,
-                'date_inscription' => '2023-09-15',
-                'statut' => 'diplome',
             ];
         }
 
