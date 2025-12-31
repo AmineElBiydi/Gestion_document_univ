@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Layout } from "@/components/layout/Layout";
 import { HistoriqueSkeleton } from "@/components/shared/Skeleton";
@@ -39,6 +39,7 @@ import {
   Calendar,
   CheckCircle2,
   MessageSquare,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiEndpoints } from "@/lib/api";
@@ -68,6 +69,7 @@ interface HistoryRecord {
 
 export default function AdminHistorique() {
   const { isAuthenticated, isLoading } = useAdminAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
 
@@ -505,16 +507,16 @@ export default function AdminHistorique() {
             <Button variant="outline" onClick={() => setShowReclamationDialog(false)}>
               Fermer
             </Button>
-            {selectedRecord?.status === 'rejetee' && (
+            {selectedRecord?.reclamation && (
               <Button
                 onClick={() => {
-                  handleReverse(selectedRecord.id);
+                  navigate(`/admin/reclamations?search=${selectedRecord.requestNumber}`);
                   setShowReclamationDialog(false);
                 }}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Accepter la réclamation & Inverser
+                <Eye className="mr-2 h-4 w-4" />
+                Voir réclamation
               </Button>
             )}
           </DialogFooter>

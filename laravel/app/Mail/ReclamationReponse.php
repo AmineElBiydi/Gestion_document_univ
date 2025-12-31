@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Reclamation;
 use App\Models\Etudiant;
@@ -16,23 +17,11 @@ class ReclamationReponse extends Mailable
 
     public $reclamation;
     public $etudiant;
-    public $typeReclamation;
-    public $reponse;
-    public $adminNom;
 
-    public function __construct(
-        Reclamation $reclamation, 
-        Etudiant $etudiant, 
-        string $typeReclamation, 
-        string $reponse,
-        string $adminNom
-    )
+    public function __construct(Reclamation $reclamation, Etudiant $etudiant)
     {
         $this->reclamation = $reclamation;
         $this->etudiant = $etudiant;
-        $this->typeReclamation = $typeReclamation;
-        $this->reponse = $reponse;
-        $this->adminNom = $adminNom;
     }
 
     public function envelope(): Envelope
@@ -48,16 +37,28 @@ class ReclamationReponse extends Mailable
             view: 'emails.reclamation-reponse',
             with: [
                 'reclamation' => $this->reclamation,
-                'etudiant' => $this->etudiant,
-                'typeReclamation' => $this->typeReclamation,
-                'reponse' => $this->reponse,
-                'adminNom' => $this->adminNom,
+                'etudiant' => $this->reclamation->etudiant,
+                'typeReclamation' => $this->reclamation->type,
+                'reponse' => $this->reclamation->reponse,
+                'adminNom' => $this->reclamation->traiteParAdmin 
+                    ? $this->reclamation->traiteParAdmin->prenom . ' ' . $this->reclamation->traiteParAdmin->nom 
+                    : 'Administration',
             ]
         );
     }
 
     public function attachments(): array
     {
-        return [];
+        $attachments = [];
+
+        // Add document attached by admin in response
+        if ($this->reclamation->piece_jointe_reponse_path) {
+            $path = storage_path('app/public/' . $this->reclamation->piece_jointe_reponse_path);
+            if (file_exists($path)) {
+                $attachments[] = Attachment::fromPath($path);
+            }
+        }
+
+        return $attachments;
     }
 }

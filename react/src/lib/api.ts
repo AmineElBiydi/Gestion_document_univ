@@ -82,8 +82,12 @@ export const apiEndpoints = {
 
   // Admin reclamations
   getReclamations: (params?: any) => api.get('/admin/reclamations', { params }),
-  repondreReclamation: (id: string, data: { reponse: string }) =>
-    api.put(`/admin/reclamations/${id}/repondre`, data),
+  repondreReclamation: (id: string, data: FormData) =>
+    api.post(`/admin/reclamations/${id}/repondre`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
 };
 
 export default api;

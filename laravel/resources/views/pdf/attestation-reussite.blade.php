@@ -137,7 +137,7 @@
             </p>
         </div>
 
-        <div class="diagonal-line"></div>
+        
     </div>
 
     <div class="footer-layout" style="margin-top: 50pt; padding-right: 40pt;">

@@ -97,8 +97,9 @@ class EmailService
     public function envoyerReponseReclamation(Reclamation $reclamation)
     {
         try {
-            Mail::to($reclamation->etudiant->email)->send(new ReclamationReponse($reclamation));
-            \Log::info('Email réponse réclamation envoyé: ' . $reclamation->id);
+            $email = $reclamation->etudiant->email;
+            Mail::to($email)->send(new ReclamationReponse($reclamation, $reclamation->etudiant));
+            \Log::info('Email réponse réclamation envoyé: ' . $reclamation->id . ' to ' . $email);
             return true;
         } catch (\Exception $e) {
             \Log::error('Erreur envoi email réponse réclamation: ' . $e->getMessage());

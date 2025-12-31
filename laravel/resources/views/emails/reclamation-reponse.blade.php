@@ -12,7 +12,7 @@
             padding: 20px;
         }
         .header {
-            background-color: #f59e0b;
+            background-color: {{ $reclamation->is_valide ? '#10b981' : '#ef4444' }};
             color: white;
             padding: 20px;
             text-align: center;
@@ -30,10 +30,16 @@
             border-left: 4px solid #f59e0b;
         }
         .response-box {
-            background-color: #ecfdf5;
+            background-color: {{ $reclamation->is_valide ? '#ecfdf5' : '#fef2f2' }};
             padding: 15px;
             margin: 15px 0;
-            border-left: 4px solid #10b981;
+            border-left: 4px solid {{ $reclamation->is_valide ? '#10b981' : '#ef4444' }};
+        }
+        .status-text {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: {{ $reclamation->is_valide ? '#059669' : '#dc2626' }};
         }
         .footer {
             text-align: center;
@@ -52,7 +58,7 @@
         }
         .response-label {
             font-weight: bold;
-            color: #059669;
+            color: {{ $reclamation->is_valide ? '#059669' : '#dc2626' }};
         }
     </style>
 </head>
@@ -66,6 +72,14 @@
         
         <p>Votre réclamation concernant la demande <strong>{{ $reclamation->demande->num_demande ?? 'N/A' }}</strong> a été traitée par notre équipe administrative.</p>
         
+        <div class="status-text">
+            @if($reclamation->is_valide)
+                <span style="color: #059669;">✓ Votre réclamation a été acceptée et validée.</span>
+            @else
+                <span style="color: #dc2626;">✗ Votre réclamation a été refusée.</span>
+            @endif
+        </div>
+
         <div class="info-box">
             <p><span class="label">Votre message :</span></p>
             <p>{{ $reclamation->description }}</p>

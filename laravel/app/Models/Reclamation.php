@@ -15,14 +15,17 @@ class Reclamation extends Model
         'type',
         'description',
         'status',
+        'is_valide',
         'piece_jointe_path',
         'reponse',
+        'piece_jointe_reponse_path',
         'traite_par_admin_id',
         'date_traitement',
     ];
 
     protected $casts = [
         'date_traitement' => 'datetime',
+        'is_valide' => 'boolean',
     ];
 
     /**

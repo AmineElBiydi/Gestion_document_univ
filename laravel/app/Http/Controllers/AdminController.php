@@ -536,7 +536,8 @@ use App\Services\PDFService;
                   ->orWhere('nom', 'like', "%{$search}%")
                   ->orWhere('prenom', 'like', "%{$search}%");
             })->orWhereHas('demande', function ($q) use ($search) {
-                $q->where('id', 'like', "%{$search}%");
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhere('num_demande', 'like', "%{$search}%");
             });
         }
 
@@ -560,7 +561,9 @@ use App\Services\PDFService;
         
         try {
             $validated = $request->validate([
-                'reponse' => 'required|string|min:10'
+                'reponse' => 'required|string|min:10',
+                'is_valide' => 'required', // S'il s'agit d'un booléen envoyé via FormData (sera une chaîne "true"/"false")
+                'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120'
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation errors:', $e->errors());
@@ -570,24 +573,90 @@ use App\Services\PDFService;
             ], 422);
         }
 
-        $reclamation = Reclamation::findOrFail($id);
+        $reclamation = Reclamation::with(['demande', 'etudiant'])->findOrFail($id);
+        $demande = $reclamation->demande;
+        $isValide = filter_var($request->is_valide, FILTER_VALIDATE_BOOLEAN);
 
-        $reclamation->update([
-            'status' => 'traitee',
-            'reponse' => $validated['reponse'],
-            'date_traitement' => now(),
-            'traite_par_admin_id' => auth()->id(),
-        ]);
+        $attachmentPath = null;
+        if ($request->hasFile('document')) {
+            $attachmentPath = $request->file('document')->store('reclamations/responses', 'public');
+        }
 
-        // Send email notification to student
-        $this->emailService->envoyerReponseReclamation($reclamation);
-        \Log::info('Email reclamation reponse sent: ' . $reclamation->id);
+        \DB::beginTransaction();
+        try {
+            $reclamation->update([
+                'status' => 'traitee',
+                'reponse' => $validated['reponse'],
+                'is_valide' => $isValide,
+                'piece_jointe_reponse_path' => $attachmentPath,
+                'date_traitement' => now(),
+                'traite_par_admin_id' => auth()->id(),
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Réponse envoyée avec succès',
-            'data' => $reclamation
-        ]);
+            $pdfPath = null;
+            if ($isValide && $demande) {
+                // Inverser l'état de la demande
+                $demande->status = 'validee';
+                $demande->raison_refus = null;
+                $demande->date_traitement = now();
+                $demande->traite_par_admin_id = auth()->id();
+                
+                // Générer le PDF correspondant
+                try {
+                    $pdfPath = $this->pdfService->generatePDF($demande);
+                    $demande->fichier_genere_path = $pdfPath;
+                } catch (\Exception $e) {
+                    \Log::error('Erreur génération PDF lors de l\'inversion via réclamation: ' . $e->getMessage());
+                }
+                
+                $demande->save();
+
+                // Ajouter à l'historique
+                \App\Models\DemandeHistorique::create([
+                    'demande_id' => $demande->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'inversee_via_reclamation',
+                    'details' => 'Statut inversé de Rejetée à Validée suite à une réclamation validée.',
+                ]);
+            }
+
+            \DB::commit();
+
+            // Rafraîchir l'objet réclamation pour inclure toutes les données (admin, etc.)
+            $reclamation->refresh();
+            $reclamation->load(['etudiant', 'demande', 'traiteParAdmin']);
+
+            // Envoyer l'email de réponse à la réclamation
+            $this->emailService->envoyerReponseReclamation($reclamation);
+            \Log::info('Email reclamation reponse sent: ' . $reclamation->id);
+
+            // Si la réclamation est valide, envoyer AUSSI l'email de validation "habituel"
+            if ($isValide && $demande) {
+                // Petit délai pour assurer la réception de deux emails distincts par certains serveurs
+                sleep(1);
+                
+                try {
+                    $this->emailService->envoyerValidationDemande($demande);
+                    \Log::info('Email validation habituel envoyé suite à réclamation: ' . $demande->num_demande);
+                } catch (\Exception $e) {
+                    \Log::error('Erreur envoi email validation habituel : ' . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Réponse envoyée avec succès',
+                'data' => $reclamation->load(['demande', 'etudiant'])
+            ]);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Error processing reclamation response: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors du traitement de la réponse : ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

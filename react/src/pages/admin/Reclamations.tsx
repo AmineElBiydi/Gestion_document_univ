@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { ReclamationsSkeleton } from "@/components/shared/Skeleton";
 import { Button } from "@/components/ui/button";
@@ -38,22 +38,30 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  Upload,
+  X,
+  AlertCircle,
 } from "lucide-react";
 import { apiEndpoints } from "@/lib/api";
 
 export default function AdminReclamations() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get("search") || "";
   const { isAuthenticated, isLoading } = useAdminAuth();
   const [reclamations, setReclamations] = useState<Reclamation[]>([]);
   const [isLoadingReclamations, setIsLoadingReclamations] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const [selectedReclamation, setSelectedReclamation] = useState<Reclamation | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showResponseDialog, setShowResponseDialog] = useState(false);
   const [response, setResponse] = useState("");
+  const [isValid, setIsValid] = useState<string>("false");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load reclamations data from API
   useEffect(() => {
@@ -115,21 +123,37 @@ export default function AdminReclamations() {
       return;
     }
     
+    setIsSubmitting(true);
     try {
-      const result = await apiEndpoints.repondreReclamation(selectedReclamation.id, { reponse: response });
+      const formData = new FormData();
+      formData.append("reponse", response);
+      formData.append("is_valide", isValid);
+      if (selectedFile) {
+        formData.append("document", selectedFile);
+      }
+
+      const result = await apiEndpoints.repondreReclamation(selectedReclamation.id, formData);
       
       if (result.data.success) {
-        toast.success("Réponse envoyée avec succès");
+        toast.success(isValid === "true" 
+            ? "Réclamation validée et réponse envoyée" 
+            : "Réclamation traitée et réponse envoyée"
+        );
         setShowResponseDialog(false);
         setSelectedReclamation(null);
         setResponse("");
+        setIsValid("false");
+        setSelectedFile(null);
         
         // Reload reclamations to update the status
         loadReclamations();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Response error:", error);
-      toast.error("Erreur lors de l'envoi de la réponse");
+      const errorMessage = error.response?.data?.message || "Erreur lors de l'envoi de la réponse";
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -394,20 +418,57 @@ export default function AdminReclamations() {
           <div className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground mb-2">Réclamation:</p>
-              <p className="text-sm bg-muted/50 p-3 rounded-lg">
+              <p className="text-sm bg-muted/50 p-3 rounded-lg border border-border">
                 {selectedReclamation?.description}
               </p>
             </div>
+
+            <div className="space-y-3 p-4 rounded-xl border border-border bg-muted/20">
+              <Label className="text-base">Décision sur la réclamation</Label>
+              <Select value={isValid} onValueChange={setIsValid}>
+                <SelectTrigger className={isValid === "true" ? "border-green-500 bg-green-50/50" : "border-orange-500 bg-orange-50/50"}>
+                  <SelectValue placeholder="Choisir une décision" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">
+                    <div className="flex items-center text-green-600">
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {selectedReclamation?.demandStatus === "rejetee" 
+                        ? "Réclamation Valide (Inverser le statut)" 
+                        : "Réclamation Valide (Accepter la demande)"}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="false">
+                    <div className="flex items-center text-orange-600">
+                      <AlertCircle className="mr-2 h-4 w-4" />
+                      {selectedReclamation?.demandStatus === "rejetee" 
+                        ? "Réclamation Non Valide (Garder refusé)" 
+                        : "Réclamation Non Valide (Refuser la demande)"}
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground italic">
+                {isValid === "true" 
+                  ? (selectedReclamation?.demandStatus === "rejetee" 
+                      ? "Le statut de la demande passera à 'Validée' et le document sera envoyé." 
+                      : "La demande sera acceptée et le document sera envoyé.")
+                  : (selectedReclamation?.demandStatus === "rejetee" 
+                      ? "Le statut de la demande restera 'Refusée'."
+                      : "La demande sera refusée.")}
+              </p>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="response">Votre réponse</Label>
+              <Label htmlFor="response">Votre réponse détaillée</Label>
               <div className="relative">
                 <Textarea
                   id="response"
                   value={response}
                   onChange={(e) => setResponse(e.target.value)}
-                  placeholder="Saisissez votre réponse..."
+                  placeholder="Expliquez la décision à l'étudiant..."
                   rows={5}
-                  className={response.length < 10 ? "border-orange-300" : ""}
+                  className={response.length < 10 ? "border-orange-200" : "border-border"}
                 />
                 <div className="absolute bottom-2 right-2 text-xs">
                   <span className={response.length < 10 ? "text-orange-500 font-medium" : "text-green-600"}>
@@ -415,24 +476,70 @@ export default function AdminReclamations() {
                   </span>
                 </div>
               </div>
-              {response.length > 0 && response.length < 10 && (
-                <p className="text-xs text-orange-600">
-                  Veuillez saisir au moins 10 caractères avant d'envoyer
-                </p>
-              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Document joint (Optionnel)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="file"
+                  id="response-file"
+                  className="hidden"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-dashed"
+                  onClick={() => document.getElementById('response-file')?.click()}
+                >
+                  {selectedFile ? (
+                    <>
+                      <FileText className="mr-2 h-4 w-4 text-primary" />
+                      {selectedFile.name}
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Joindre un justificatif ou document
+                    </>
+                  )}
+                </Button>
+                {selectedFile && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedFile(null)}
+                    className="text-destructive h-10 w-10"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowResponseDialog(false)}>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowResponseDialog(false)} disabled={isSubmitting}>
               Annuler
             </Button>
             <Button 
               onClick={handleRespond}
-              disabled={response.length < 10}
-              className={response.length < 10 ? "opacity-50 cursor-not-allowed" : ""}
+              disabled={response.length < 10 || isSubmitting}
+              className={isValid === "true" ? "bg-green-600 hover:bg-green-700" : "bg-primary"}
             >
-              <Send className="mr-2 h-4 w-4" />
-              Envoyer la réponse
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                  Traitement...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  {isValid === "true" ? "Valider & Envoyer" : "Répondre & Clôturer"}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

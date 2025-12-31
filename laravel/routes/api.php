@@ -39,5 +39,5 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Routes pour les réclamations
     Route::get('/admin/reclamations', [AdminController::class, 'getReclamations']);
-    Route::put('/admin/reclamations/{id}/repondre', [AdminController::class, 'repondreReclamation']);
+    Route::post('/admin/reclamations/{id}/repondre', [AdminController::class, 'repondreReclamation']);
 });
