@@ -60,7 +60,7 @@ export default function Demande() {
   // Document/Action data
   const [selectedAction, setSelectedAction] = useState<FormAction | "">("");
   const [details, setDetails] = useState<Record<string, string>>({});
-  const [studentAnneesUniversitaires, setStudentAnneesUniversitaires] = useState<{ id: number, libelle: string }[]>([]);
+  const [studentAnneesUniversitaires, setStudentAnneesUniversitaires] = useState<{ id: number, libelle: string, est_active: boolean }[]>([]);
 
   // Reclamation data
   const [requestNumber, setRequestNumber] = useState("");
@@ -479,11 +479,13 @@ export default function Demande() {
                 <SelectValue placeholder="Sélectionnez l'année" />
               </SelectTrigger>
               <SelectContent>
-                {studentAnneesUniversitaires.map((item) => (
-                  <SelectItem key={item.id} value={item.libelle}>
-                    {item.libelle}
-                  </SelectItem>
-                ))}
+                {studentAnneesUniversitaires
+                  .filter((item) => !item.est_active)
+                  .map((item) => (
+                    <SelectItem key={item.id} value={item.libelle}>
+                      {item.libelle}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -505,11 +507,13 @@ export default function Demande() {
                 <SelectValue placeholder="Sélectionnez l'année" />
               </SelectTrigger>
               <SelectContent>
-                {studentAnneesUniversitaires.map((item) => (
-                  <SelectItem key={item.id} value={item.libelle}>
-                    {item.libelle}
-                  </SelectItem>
-                ))}
+                {studentAnneesUniversitaires
+                  .filter(item => !item.est_active)
+                  .map((item) => (
+                    <SelectItem key={item.id} value={item.libelle}>
+                      {item.libelle}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

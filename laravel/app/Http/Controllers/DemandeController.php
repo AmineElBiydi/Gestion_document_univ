@@ -108,7 +108,8 @@ class DemandeController extends Controller
                     ->map(function ($inscription) {
                         return [
                             'id' => $inscription->id,
-                            'libelle' => $inscription->anneeUniversitaire->libelle ?? 'Année inconnue'
+                            'libelle' => $inscription->anneeUniversitaire->libelle ?? 'Année inconnue',
+                            'est_active' => (bool)($inscription->anneeUniversitaire->est_active ?? false)
                         ];
                     })
                     ->values()
