@@ -13,7 +13,7 @@ Route::post('/validate-student', [DemandeController::class, 'validateStudent']);
 Route::get('/professeurs', [DemandeController::class, 'getProfesseurs']);
 Route::get('/demandes/download-pdf/{num_demande}', [DemandeController::class, 'downloadPdf']);
 
-// Routes d'authentification admin
+// Routes d'authentification admin 
 Route::post('/admin/login', [AdminController::class, 'login']);
 
 // Routes protégées (Admin)
